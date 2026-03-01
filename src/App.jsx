@@ -5,8 +5,21 @@ import InputSection from "./components/InputSection";
 import CustomizationSection from "./components/CustomizationSection";
 import QRPreview from "./components/QRPreview";
 import DownloadSection from "./components/DownloadSection";
+import ThemeToggle from "./components/ThemeToggle";
 
 function App() {
+  const [isDark, setIsDark] = useState(
+    () => localStorage.getItem("theme") === "dark"
+  );
+
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      "data-theme",
+      isDark ? "dark" : "light"
+    );
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }, [isDark]);
+
   const [qrData, setQrData] = useState({});
   const [qrType, setQrType] = useState("URL");
   const [qrColors, setQrColors] = useState({
@@ -259,6 +272,7 @@ END:VCARD`;
 
   return (
     <div className="app-container">
+      <ThemeToggle isDark={isDark} onToggle={() => setIsDark((d) => !d)} />
       <div className="left-panel">
         <h1 className="app-title">QR Generator</h1>
         <QRTypeSelector qrType={qrType} setQrType={setQrType} />
