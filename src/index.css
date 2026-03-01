@@ -1,10 +1,13 @@
 :root {
-  --primary-color: #4583C4;
+  --primary-color: #4583c4;
   --primary-hover: #3a6fa8;
   --primary-light: #f0f6ff;
   --primary-light-hover: #f7faff;
 
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: #213547;
@@ -37,7 +40,10 @@ body {
 .app-container {
   display: flex;
   min-height: 100vh;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 @media (max-width: 768px) {
@@ -536,7 +542,6 @@ body {
   }
 }
 
-
 .download-section {
   display: flex;
   gap: 12px;
@@ -562,4 +567,3 @@ body {
 .download-button:hover {
   background-color: var(--primary-hover);
 }
-

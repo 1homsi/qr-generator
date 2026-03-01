@@ -1,6 +1,6 @@
 function InputSection({ qrType, qrData, setQrData }) {
   const handleInputChange = (field, value) => {
-    setQrData(prev => ({ ...prev, [field]: value }));
+    setQrData((prev) => ({ ...prev, [field]: value }));
   };
 
   const renderInputs = () => {
@@ -10,8 +10,8 @@ function InputSection({ qrType, qrData, setQrData }) {
           <input
             type="url"
             placeholder="https://www.voxire.com"
-            value={qrData.url || ''}
-            onChange={(e) => handleInputChange('url', e.target.value)}
+            value={qrData.url || ""}
+            onChange={(e) => handleInputChange("url", e.target.value)}
             className="url-input"
             required
           />
@@ -21,8 +21,8 @@ function InputSection({ qrType, qrData, setQrData }) {
         return (
           <textarea
             placeholder="Enter your text here..."
-            value={qrData.text || ''}
-            onChange={(e) => handleInputChange('text', e.target.value)}
+            value={qrData.text || ""}
+            onChange={(e) => handleInputChange("text", e.target.value)}
             className="url-input"
             rows={3}
           />
@@ -34,43 +34,45 @@ function InputSection({ qrType, qrData, setQrData }) {
             <input
               type="text"
               placeholder="First Name"
-              value={qrData.firstName || ''}
-              onChange={(e) => handleInputChange('firstName', e.target.value)}
+              value={qrData.firstName || ""}
+              onChange={(e) => handleInputChange("firstName", e.target.value)}
               className="url-input"
             />
             <input
               type="text"
               placeholder="Last Name"
-              value={qrData.lastName || ''}
-              onChange={(e) => handleInputChange('lastName', e.target.value)}
+              value={qrData.lastName || ""}
+              onChange={(e) => handleInputChange("lastName", e.target.value)}
               className="url-input"
             />
             <input
               type="tel"
               placeholder="Phone Number"
-              value={qrData.phone || ''}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
+              value={qrData.phone || ""}
+              onChange={(e) => handleInputChange("phone", e.target.value)}
               className="url-input"
             />
             <input
               type="email"
               placeholder="Email Address"
-              value={qrData.email || ''}
-              onChange={(e) => handleInputChange('email', e.target.value)}
+              value={qrData.email || ""}
+              onChange={(e) => handleInputChange("email", e.target.value)}
               className="url-input"
             />
             <input
               type="text"
               placeholder="Organization"
-              value={qrData.organization || ''}
-              onChange={(e) => handleInputChange('organization', e.target.value)}
+              value={qrData.organization || ""}
+              onChange={(e) =>
+                handleInputChange("organization", e.target.value)
+              }
               className="url-input"
             />
             <input
               type="url"
               placeholder="https://www.voxire.com"
-              value={qrData.website || ''}
-              onChange={(e) => handleInputChange('website', e.target.value)}
+              value={qrData.website || ""}
+              onChange={(e) => handleInputChange("website", e.target.value)}
               className="url-input"
             />
           </div>
@@ -82,21 +84,21 @@ function InputSection({ qrType, qrData, setQrData }) {
             <input
               type="email"
               placeholder="Recipient Email"
-              value={qrData.email || ''}
-              onChange={(e) => handleInputChange('email', e.target.value)}
+              value={qrData.email || ""}
+              onChange={(e) => handleInputChange("email", e.target.value)}
               className="url-input"
             />
             <input
               type="text"
               placeholder="Subject"
-              value={qrData.subject || ''}
-              onChange={(e) => handleInputChange('subject', e.target.value)}
+              value={qrData.subject || ""}
+              onChange={(e) => handleInputChange("subject", e.target.value)}
               className="url-input"
             />
             <textarea
               placeholder="Message body..."
-              value={qrData.body || ''}
-              onChange={(e) => handleInputChange('body', e.target.value)}
+              value={qrData.body || ""}
+              onChange={(e) => handleInputChange("body", e.target.value)}
               className="url-input"
               rows={3}
             />
@@ -109,14 +111,14 @@ function InputSection({ qrType, qrData, setQrData }) {
             <input
               type="tel"
               placeholder="Phone Number"
-              value={qrData.phone || ''}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
+              value={qrData.phone || ""}
+              onChange={(e) => handleInputChange("phone", e.target.value)}
               className="url-input"
             />
             <textarea
               placeholder="Message..."
-              value={qrData.message || ''}
-              onChange={(e) => handleInputChange('message', e.target.value)}
+              value={qrData.message || ""}
+              onChange={(e) => handleInputChange("message", e.target.value)}
               className="url-input"
               rows={3}
             />
@@ -129,20 +131,20 @@ function InputSection({ qrType, qrData, setQrData }) {
             <input
               type="text"
               placeholder="Network Name (SSID)"
-              value={qrData.ssid || ''}
-              onChange={(e) => handleInputChange('ssid', e.target.value)}
+              value={qrData.ssid || ""}
+              onChange={(e) => handleInputChange("ssid", e.target.value)}
               className="url-input"
             />
             <input
               type="password"
               placeholder="Password"
-              value={qrData.password || ''}
-              onChange={(e) => handleInputChange('password', e.target.value)}
+              value={qrData.password || ""}
+              onChange={(e) => handleInputChange("password", e.target.value)}
               className="url-input"
             />
             <select
-              value={qrData.security || 'WPA'}
-              onChange={(e) => handleInputChange('security', e.target.value)}
+              value={qrData.security || "WPA"}
+              onChange={(e) => handleInputChange("security", e.target.value)}
               className="url-input"
             >
               <option value="WPA">WPA/WPA2</option>
