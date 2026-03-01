@@ -260,7 +260,7 @@ END:VCARD`;
   return (
     <div className="app-container">
       <div className="left-panel">
-        <img src="/logo.png" alt="Voxire Logo" className="logo" />
+        <h1 className="app-title">QR Generator</h1>
         <QRTypeSelector qrType={qrType} setQrType={setQrType} />
         <InputSection qrType={qrType} qrData={qrData} setQrData={setQrData} />
         <CustomizationSection
