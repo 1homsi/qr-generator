@@ -31,17 +31,17 @@
 }
 
 [data-theme="dark"] {
-  --bg: #0f172a;
-  --panel-bg: #1e293b;
-  --border: #334155;
-  --border-subtle: #475569;
+  --bg: #101010;
+  --panel-bg: #1a1a1a;
+  --border: #2e2e2e;
+  --border-subtle: #3a3a3a;
   --text-primary: #f1f5f9;
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
   --text-faint: #64748b;
   --body-color: #e2e8f0;
-  --surface: #1e293b;
-  --dropzone-bg: #162032;
+  --surface: #1a1a1a;
+  --dropzone-bg: #141414;
   --primary-light: #1e3a5f;
   --primary-light-hover: #1a3352;
 }
