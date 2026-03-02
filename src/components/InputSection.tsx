@@ -1,11 +1,12 @@
 import { memo, useState, Dispatch, SetStateAction } from "react";
-import { FiChevronDown, FiLink } from "react-icons/fi";
+import { FiChevronDown, FiLink, FiEye, FiEyeOff } from "react-icons/fi";
 import type { QrData, QrType } from "../types";
 
 interface InputSectionProps {
   qrType: QrType;
   qrData: QrData;
   setQrData: Dispatch<SetStateAction<QrData>>;
+  onAutoDetect?: (type: QrType, data: Partial<QrData>) => void;
 }
 
 const TITLES: Record<QrType, string> = {
@@ -28,13 +29,42 @@ const TITLES: Record<QrType, string> = {
   UPI: "Enter UPI payment details",
 };
 
+function detectQrType(url: string): { type: QrType; data: Partial<QrData> } | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    const path = u.pathname;
+
+    if (host === "open.spotify.com") return { type: "SPOTIFY", data: { spotifyUrl: url } };
+    if (host === "youtube.com" && path.startsWith("/watch")) return { type: "YOUTUBE", data: { youtubeUrl: url } };
+    if (host === "youtu.be") return { type: "YOUTUBE", data: { youtubeUrl: url } };
+    if (host === "wa.me" || host === "api.whatsapp.com") {
+      const phone = path.replace(/^\//, "");
+      const text = u.searchParams.get("text") ?? "";
+      return { type: "WHATSAPP", data: { phone, message: text } };
+    }
+    if (host === "zoom.us" && path.startsWith("/j/")) {
+      const id = path.slice(3).replace(/\D/g, "");
+      const pwd = u.searchParams.get("pwd") ?? "";
+      return { type: "ZOOM", data: { zoomMeetingId: id, zoomPassword: pwd } };
+    }
+    if (host === "apps.apple.com") return { type: "APPSTORE", data: { appPlatform: "ios", appUrl: url } };
+    if (host === "play.google.com" && path.startsWith("/store/apps")) return { type: "APPSTORE", data: { appPlatform: "android", appUrl: url } };
+  } catch {
+    // not a valid URL
+  }
+  return null;
+}
+
 const InputSection = memo(function InputSection({
   qrType,
   qrData,
   setQrData,
+  onAutoDetect,
 }: InputSectionProps) {
   const [showUtm, setShowUtm] = useState(false);
   const [shortening, setShortening] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const set = (field: keyof QrData, value: string) =>
     setQrData((prev) => ({ ...prev, [field]: value }));
@@ -75,6 +105,15 @@ const InputSection = memo(function InputSection({
               placeholder="https://example.com"
               value={qrData.url ?? ""}
               onChange={(e) => set("url", e.target.value)}
+              onPaste={(e) => {
+                if (!onAutoDetect) return;
+                const pasted = e.clipboardData.getData("text").trim();
+                const detected = detectQrType(pasted);
+                if (detected) {
+                  e.preventDefault();
+                  onAutoDetect(detected.type, detected.data);
+                }
+              }}
               className="url-input"
             />
 
@@ -341,13 +380,23 @@ const InputSection = memo(function InputSection({
               onChange={(e) => set("ssid", e.target.value)}
               className="url-input"
             />
-            <input
-              type="password"
-              placeholder="Password"
-              value={qrData.password ?? ""}
-              onChange={(e) => set("password", e.target.value)}
-              className="url-input"
-            />
+            <div className="password-field-row">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={qrData.password ?? ""}
+                onChange={(e) => set("password", e.target.value)}
+                className="url-input"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword((v) => !v)}
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <FiEyeOff size={15} /> : <FiEye size={15} />}
+              </button>
+            </div>
             <select
               value={qrData.security ?? "WPA"}
               onChange={(e) =>

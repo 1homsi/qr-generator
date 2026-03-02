@@ -679,7 +679,23 @@ END:VCALENDAR`;
         <h1 className="app-title">QR Generator</h1>
         <p className="app-subtitle">Generate &amp; customize QR codes</p>
         <QRTypeSelector qrType={qrType} setQrType={setQrType} />
-        <InputSection qrType={qrType} qrData={qrData} setQrData={setQrData} />
+        <InputSection
+          qrType={qrType}
+          qrData={qrData}
+          setQrData={setQrData}
+          onAutoDetect={(type, data) => {
+            setQrType(type);
+            setQrData(data as QrData);
+            const labels: Partial<Record<typeof type, string>> = {
+              SPOTIFY: "Spotify",
+              YOUTUBE: "YouTube",
+              WHATSAPP: "WhatsApp",
+              ZOOM: "Zoom",
+              APPSTORE: "App Store",
+            };
+            showToast(`Switched to ${labels[type] ?? type} QR`);
+          }}
+        />
         <CustomizationSection
           qrColors={qrColors}
           setQrColors={setQrColors}
