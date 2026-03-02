@@ -1,12 +1,20 @@
-import { memo } from "react";
+import { memo, ReactNode } from "react";
 import {
   FiUser,
   FiFileText,
   FiMail,
   FiMessageSquare,
   FiWifi,
+  FiPhone,
+  FiMapPin,
+  FiCalendar,
+  FiCreditCard,
+  FiVideo,
+  FiYoutube,
+  FiSmartphone,
+  FiDollarSign,
 } from "react-icons/fi";
-import { FaLink } from "react-icons/fa";
+import { FaLink, FaBitcoin, FaWhatsapp, FaSpotify } from "react-icons/fa";
 import type { QrType } from "../types";
 
 interface QRTypeSelectorProps {
@@ -14,13 +22,24 @@ interface QRTypeSelectorProps {
   setQrType: (type: QrType) => void;
 }
 
-const QR_TYPES: { id: QrType; label: string; icon: React.ReactNode }[] = [
+const QR_TYPES: { id: QrType; label: string; icon: ReactNode }[] = [
   { id: "URL", label: "URL", icon: <FaLink /> },
-  { id: "VCARD", label: "VCARD", icon: <FiUser /> },
-  { id: "TEXT", label: "TEXT", icon: <FiFileText /> },
-  { id: "EMAIL", label: "E-MAIL", icon: <FiMail /> },
+  { id: "TEXT", label: "Text", icon: <FiFileText /> },
+  { id: "VCARD", label: "vCard", icon: <FiUser /> },
+  { id: "MECARD", label: "MeCard", icon: <FiCreditCard /> },
+  { id: "EMAIL", label: "Email", icon: <FiMail /> },
   { id: "SMS", label: "SMS", icon: <FiMessageSquare /> },
-  { id: "WIFI", label: "WIFI", icon: <FiWifi /> },
+  { id: "PHONE", label: "Phone", icon: <FiPhone /> },
+  { id: "WHATSAPP", label: "WhatsApp", icon: <FaWhatsapp /> },
+  { id: "WIFI", label: "WiFi", icon: <FiWifi /> },
+  { id: "LOCATION", label: "Location", icon: <FiMapPin /> },
+  { id: "EVENT", label: "Event", icon: <FiCalendar /> },
+  { id: "ZOOM", label: "Zoom", icon: <FiVideo /> },
+  { id: "SPOTIFY", label: "Spotify", icon: <FaSpotify /> },
+  { id: "YOUTUBE", label: "YouTube", icon: <FiYoutube /> },
+  { id: "APPSTORE", label: "App Store", icon: <FiSmartphone /> },
+  { id: "CRYPTO", label: "Crypto", icon: <FaBitcoin /> },
+  { id: "UPI", label: "UPI Pay", icon: <FiDollarSign /> },
 ];
 
 const QRTypeSelector = memo(function QRTypeSelector({

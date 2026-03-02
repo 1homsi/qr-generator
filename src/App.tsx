@@ -27,6 +27,13 @@ const getGradientConfig = (
   })),
 });
 
+const CRYPTO_SCHEMES: Record<string, string> = {
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  SOL: "solana",
+  LTC: "litecoin",
+};
+
 function App() {
   const [isDark, setIsDark] = useState<boolean>(
     () => localStorage.getItem("theme") === "dark"
@@ -98,6 +105,70 @@ END:VCARD`;
 
       case "WIFI":
         return `WIFI:T:${qrData.security || "WPA"};S:${qrData.ssid || ""};P:${qrData.password || ""};H:false;;`;
+
+      case "PHONE":
+        return `tel:${qrData.phone || ""}`;
+
+      case "LOCATION":
+        return `geo:${qrData.latitude || "0"},${qrData.longitude || "0"}`;
+
+      case "EVENT": {
+        const fmt = (dt: string) =>
+          dt.replace(/-/g, "").replace(/:/g, "") + "00";
+        return `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:${qrData.eventTitle || ""}
+DTSTART:${fmt(qrData.eventStart || "")}
+DTEND:${fmt(qrData.eventEnd || "")}
+LOCATION:${qrData.eventLocation || ""}
+DESCRIPTION:${qrData.eventDescription || ""}
+END:VEVENT
+END:VCALENDAR`;
+      }
+
+      case "CRYPTO": {
+        const scheme = CRYPTO_SCHEMES[qrData.cryptoCurrency || "BTC"];
+        const amount = qrData.cryptoAmount
+          ? `?amount=${qrData.cryptoAmount}`
+          : "";
+        return `${scheme}:${qrData.cryptoAddress || ""}${amount}`;
+      }
+
+      case "MECARD":
+        return `MECARD:N:${qrData.lastName || ""},${qrData.firstName || ""};TEL:${qrData.phone || ""};EMAIL:${qrData.email || ""};URL:${qrData.website || ""};ADR:${qrData.mecardAddress || ""};;`;
+
+      case "WHATSAPP": {
+        const phone = (qrData.phone || "").replace(/[^0-9]/g, "");
+        const msg = qrData.message
+          ? `?text=${encodeURIComponent(qrData.message)}`
+          : "";
+        return `https://wa.me/${phone}${msg}`;
+      }
+
+      case "ZOOM": {
+        const pwd = qrData.zoomPassword ? `?pwd=${qrData.zoomPassword}` : "";
+        return `https://zoom.us/j/${(qrData.zoomMeetingId || "").replace(/\s/g, "")}${pwd}`;
+      }
+
+      case "SPOTIFY":
+        return qrData.spotifyUrl || "";
+
+      case "YOUTUBE":
+        return qrData.youtubeUrl || "";
+
+      case "APPSTORE":
+        return qrData.appUrl || "";
+
+      case "UPI": {
+        const params = new URLSearchParams();
+        params.set("pa", qrData.upiId || "");
+        if (qrData.upiName) params.set("pn", qrData.upiName);
+        if (qrData.upiAmount) params.set("am", qrData.upiAmount);
+        params.set("cu", "INR");
+        if (qrData.upiNote) params.set("tn", qrData.upiNote);
+        return `upi://pay?${params.toString()}`;
+      }
     }
   };
 
