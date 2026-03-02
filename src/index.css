@@ -163,6 +163,7 @@ body {
 .left-panel {
   flex: 1;
   max-width: 420px;
+  min-height: 100vh;
   background: var(--panel-bg);
   padding: 16px 24px 24px 24px;
   border-right: 1px solid var(--border);
