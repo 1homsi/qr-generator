@@ -16,8 +16,6 @@ import {
   FiLayout,
   FiImage,
   FiActivity,
-  FiMaximize2,
-  FiMinimize2,
 } from "react-icons/fi";
 import type { PreviewSize } from "./QRPreview";
 
@@ -91,21 +89,6 @@ const ExtraActions = memo(function ExtraActions(props: ExtraActionsProps) {
         </Btn>
       </div>
 
-      {/* Preview size */}
-      <div className="preview-size-row">
-        <FiMaximize2 size={12} style={{ color: "var(--text-muted)" }} />
-        {(["sm", "md", "lg"] as PreviewSize[]).map((s) => (
-          <button
-            key={s}
-            className={`size-pill-btn ${previewSize === s ? "active" : ""}`}
-            onClick={() => onSizeChange(s)}
-            aria-label={`Preview size ${s}`}
-          >
-            {s.toUpperCase()}
-          </button>
-        ))}
-        <FiMinimize2 size={12} style={{ color: "var(--text-muted)", transform: "rotate(180deg)" }} />
-      </div>
 
       {/* Export */}
       <p className="extra-actions-group-label">Export</p>
