@@ -18,53 +18,37 @@ export type QrType =
   | "UPI";
 
 export interface QrData {
-  // URL
   url?: string;
-  // TEXT
   text?: string;
-  // VCARD / MECARD shared fields
   firstName?: string;
   lastName?: string;
   organization?: string;
   website?: string;
-  // VCARD / MECARD / EMAIL / SMS / WHATSAPP / PHONE shared fields
   phone?: string;
   email?: string;
-  // EMAIL
   subject?: string;
   body?: string;
-  // SMS / WHATSAPP shared
   message?: string;
-  // WIFI
   ssid?: string;
   password?: string;
   security?: "WPA" | "WEP" | "nopass";
-  // LOCATION
   latitude?: string;
   longitude?: string;
-  // EVENT
   eventTitle?: string;
   eventStart?: string;
   eventEnd?: string;
   eventLocation?: string;
   eventDescription?: string;
-  // CRYPTO
   cryptoCurrency?: "BTC" | "ETH" | "SOL" | "LTC";
   cryptoAddress?: string;
   cryptoAmount?: string;
-  // MECARD
   mecardAddress?: string;
-  // ZOOM
   zoomMeetingId?: string;
   zoomPassword?: string;
-  // SPOTIFY
   spotifyUrl?: string;
-  // YOUTUBE
   youtubeUrl?: string;
-  // APPSTORE
   appPlatform?: "ios" | "android";
   appUrl?: string;
-  // UPI
   upiId?: string;
   upiName?: string;
   upiAmount?: string;
@@ -96,6 +80,8 @@ export type CornerDotStyle = "square" | "dot" | "rounded";
 
 export type GradientType = "linear" | "radial";
 
+export type FrameTemplate = "none" | "rounded" | "badge" | "banner";
+
 export interface QrStyles {
   dotStyle: DotStyle;
   cornerSquareStyle: CornerSquareStyle;
@@ -103,10 +89,29 @@ export interface QrStyles {
   useGradient: boolean;
   gradientType: GradientType;
   gradientRotation: number;
-  gradientColors: [string, string];
+  gradientColors: string[];
   backgroundGradient: boolean;
-  backgroundGradientColors: [string, string];
+  backgroundGradientColors: string[];
   logoFile: string | null;
   logoSize: number;
   logoMargin: number;
+  // Background image
+  backgroundImage: string | null;
+  backgroundOpacity: number;
+  // Frame / CTA
+  frameTemplate: FrameTemplate;
+  frameText: string;
+  frameTextPosition: "top" | "bottom";
+  frameColor: string;
+  frameFontColor: string;
+}
+
+export interface HistoryEntry {
+  id: string;
+  timestamp: number;
+  qrType: QrType;
+  qrData: QrData;
+  qrColors: QrColors;
+  qrStyles: QrStyles;
+  thumbnail: string;
 }

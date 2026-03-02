@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import QRCodeStyling from "qr-code-styling";
 import QRTypeSelector from "./components/QRTypeSelector";
 import InputSection from "./components/InputSection";
@@ -6,9 +6,15 @@ import CustomizationSection from "./components/CustomizationSection";
 import QRPreview from "./components/QRPreview";
 import DownloadSection from "./components/DownloadSection";
 import ThemeToggle from "./components/ThemeToggle";
+import HistoryPanel from "./components/HistoryPanel";
+import BatchPanel from "./components/BatchPanel";
+import ScanPanel from "./components/ScanPanel";
+import OnboardingTooltip from "./components/OnboardingTooltip";
+import { useUndoRedo } from "./hooks/useUndoRedo";
+import { useQrHistory } from "./hooks/useQrHistory";
+import { applyPostProcessing } from "./utils/canvasUtils";
 import type { QrData, QrColors, QrStyles, QrType, GradientType } from "./types";
-
-type Fmt = "png" | "svg" | "jpeg";
+import type { Fmt } from "./components/DownloadSection";
 
 interface GradientConfig {
   type: GradientType;
@@ -17,14 +23,14 @@ interface GradientConfig {
 }
 
 const getGradientConfig = (
-  colors: [string, string],
+  colors: string[],
   rotation = 0,
   type: GradientType = "linear"
 ): GradientConfig => ({
   type,
   rotation,
   colorStops: colors.map((color, index) => ({
-    offset: index / (colors.length - 1),
+    offset: index / Math.max(1, colors.length - 1),
     color,
   })),
 });
@@ -34,6 +40,34 @@ const CRYPTO_SCHEMES: Record<string, string> = {
   ETH: "ethereum",
   SOL: "solana",
   LTC: "litecoin",
+};
+
+const INITIAL_STYLE_STATE: { qrColors: QrColors; qrStyles: QrStyles } = {
+  qrColors: {
+    foreground: "#000000",
+    background: "#ffffff",
+  },
+  qrStyles: {
+    dotStyle: "square",
+    cornerSquareStyle: "square",
+    cornerDotStyle: "square",
+    useGradient: false,
+    gradientType: "linear",
+    gradientRotation: 0,
+    gradientColors: ["#000000", "#333333"],
+    backgroundGradient: false,
+    backgroundGradientColors: ["#ffffff", "#f0f0f0"],
+    logoFile: null,
+    logoSize: 0.3,
+    logoMargin: 10,
+    backgroundImage: null,
+    backgroundOpacity: 0.8,
+    frameTemplate: "none",
+    frameText: "",
+    frameTextPosition: "bottom",
+    frameColor: "#4583c4",
+    frameFontColor: "#ffffff",
+  },
 };
 
 function App() {
@@ -52,30 +86,72 @@ function App() {
   const [qrData, setQrData] = useState<QrData>({});
   const [qrType, setQrType] = useState<QrType>("URL");
   const [format, setFormat] = useState<Fmt>("png");
-  const [qrColors, setQrColors] = useState<QrColors>({
-    foreground: "#000000",
-    background: "#ffffff",
-  });
-  const [qrStyles, setQrStyles] = useState<QrStyles>({
-    dotStyle: "square",
-    cornerSquareStyle: "square",
-    cornerDotStyle: "square",
-    useGradient: false,
-    gradientType: "linear",
-    gradientRotation: 0,
-    gradientColors: ["#000000", "#333333"],
-    backgroundGradient: false,
-    backgroundGradientColors: ["#ffffff", "#f0f0f0"],
-    logoFile: null,
-    logoSize: 0.3,
-    logoMargin: 10,
-  });
-  const [toast, setToast] = useState<{ msg: string; key: number } | null>(
-    null
+  const [toast, setToast] = useState<{ msg: string; key: number } | null>(null);
+  const [phonePreview, setPhonePreview] = useState(false);
+  const [compareSnapshot, setCompareSnapshot] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showBatch, setShowBatch] = useState(false);
+  const [showScan, setShowScan] = useState(false);
+
+  const {
+    state: styleState,
+    set: setStyleState,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useUndoRedo(INITIAL_STYLE_STATE);
+
+  const { qrColors, qrStyles } = styleState;
+
+  const setQrColors = useCallback(
+    (next: QrColors | ((prev: QrColors) => QrColors)) => {
+      setStyleState((prev) => ({
+        ...prev,
+        qrColors: typeof next === "function" ? next(prev.qrColors) : next,
+      }));
+    },
+    [setStyleState]
+  );
+
+  const setQrStyles = useCallback(
+    (next: QrStyles | ((prev: QrStyles) => QrStyles)) => {
+      setStyleState((prev) => ({
+        ...prev,
+        qrStyles: typeof next === "function" ? next(prev.qrStyles) : next,
+      }));
+    },
+    [setStyleState]
   );
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { history, addEntry, removeEntry, clearHistory } = useQrHistory();
+
+  // Keyboard shortcuts: Ctrl/Cmd+Z (undo), Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z (redo)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
+        if (canUndo) {
+          e.preventDefault();
+          undo();
+        }
+      }
+      if (
+        ((e.ctrlKey || e.metaKey) && e.key === "y") ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "Z")
+      ) {
+        if (canRedo) {
+          e.preventDefault();
+          redo();
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo, canUndo, canRedo]);
 
   useEffect(() => {
     generateQRCode();
@@ -186,6 +262,7 @@ END:VCALENDAR`;
   };
 
   const buildQRConfig = (size: number, content: string) => {
+    const useTransparentBg = !!qrStyles.backgroundImage;
     const cornerGradient = qrStyles.useGradient
       ? {
           gradient: getGradientConfig(
@@ -229,9 +306,11 @@ END:VCALENDAR`;
           : { color: qrColors.foreground }),
       },
       backgroundOptions: {
-        ...(qrStyles.backgroundGradient
-          ? { gradient: getGradientConfig(qrStyles.backgroundGradientColors) }
-          : { color: qrColors.background }),
+        ...(useTransparentBg
+          ? { color: "rgba(0,0,0,0)" }
+          : qrStyles.backgroundGradient
+            ? { gradient: getGradientConfig(qrStyles.backgroundGradientColors) }
+            : { color: qrColors.background }),
       },
       cornersSquareOptions: {
         type: qrStyles.cornerSquareStyle,
@@ -253,6 +332,24 @@ END:VCALENDAR`;
     }
   };
 
+  const getCompositeCanvas = async (size: number): Promise<HTMLCanvasElement | null> => {
+    const content = generateQRContent();
+    if (!content) return null;
+    const qrCode = new QRCodeStyling(buildQRConfig(size, content));
+    const blob = await qrCode.getRawData("png");
+    if (!blob) return null;
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.src = url;
+    await new Promise<void>((resolve) => { img.onload = () => resolve(); });
+    URL.revokeObjectURL(url);
+    const srcCanvas = document.createElement("canvas");
+    srcCanvas.width = size;
+    srcCanvas.height = size;
+    srcCanvas.getContext("2d")!.drawImage(img, 0, 0);
+    return applyPostProcessing(srcCanvas, qrStyles);
+  };
+
   const downloadQRCode = async (): Promise<void> => {
     const content = generateQRContent();
     if (!content) {
@@ -260,11 +357,33 @@ END:VCALENDAR`;
       return;
     }
     try {
-      const qrCode = new QRCodeStyling(buildQRConfig(1024, content));
-      await qrCode.download({ name: "qr-code", extension: format });
+      if (format === "svg" && !qrStyles.backgroundImage && qrStyles.frameTemplate === "none") {
+        const qrCode = new QRCodeStyling(buildQRConfig(1024, content));
+        await qrCode.download({ name: "qr-code", extension: "svg" });
+      } else {
+        const finalCanvas = await getCompositeCanvas(1024);
+        if (!finalCanvas) return;
+        const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+        const blob = await new Promise<Blob>((resolve) =>
+          finalCanvas.toBlob((b) => resolve(b!), mimeType, 0.95)
+        );
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `qr-code.${format === "jpeg" ? "jpg" : format}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      // Save to history on download
+      const canvas = canvasRef.current?.querySelector("canvas");
+      if (canvas) {
+        addEntry(qrType, qrData, qrColors, qrStyles, canvas.toDataURL("image/png", 0.5));
+      }
       showToast(`Downloaded as ${format.toUpperCase()}`);
     } catch (error) {
       console.error("Error downloading QR code:", error);
+      showToast("Download failed");
     }
   };
 
@@ -275,18 +394,94 @@ END:VCALENDAR`;
       return;
     }
     try {
-      const qrCode = new QRCodeStyling(buildQRConfig(512, content));
-      const blob = await qrCode.getRawData("png");
-      if (!blob) return;
+      const finalCanvas = await getCompositeCanvas(512);
+      if (!finalCanvas) return;
+      const blob = await new Promise<Blob>((resolve) =>
+        finalCanvas.toBlob((b) => resolve(b!), "image/png")
+      );
       await navigator.clipboard.write([
         new ClipboardItem({ "image/png": blob }),
       ]);
       showToast("Copied to clipboard!");
-    } catch (error) {
-      console.error("Error copying QR code:", error);
+    } catch {
       showToast("Copy failed — try downloading instead");
     }
   };
+
+  const copyText = () => {
+    const content = generateQRContent();
+    if (!content) {
+      showToast("Nothing to copy");
+      return;
+    }
+    navigator.clipboard
+      .writeText(content)
+      .then(() => showToast("Text copied!"))
+      .catch(() => showToast("Copy failed"));
+  };
+
+  const shareQR = async () => {
+    const content = generateQRContent();
+    if (!content) return;
+    try {
+      const finalCanvas = await getCompositeCanvas(512);
+      if (!finalCanvas) return;
+      const blob = await new Promise<Blob>((resolve) =>
+        finalCanvas.toBlob((b) => resolve(b!), "image/png")
+      );
+      const file = new File([blob], "qr-code.png", { type: "image/png" });
+      await navigator.share({ files: [file], title: "QR Code" });
+    } catch {
+      showToast("Share failed");
+    }
+  };
+
+  const embedQR = async () => {
+    const content = generateQRContent();
+    if (!content) return;
+    try {
+      const finalCanvas = await getCompositeCanvas(320);
+      if (!finalCanvas) return;
+      const dataUri = finalCanvas.toDataURL("image/png");
+      const html = `<img src="${dataUri}" alt="QR Code" width="${finalCanvas.width}" height="${finalCanvas.height}" />`;
+      await navigator.clipboard.writeText(html);
+      showToast("Embed code copied!");
+    } catch {
+      showToast("Failed to generate embed code");
+    }
+  };
+
+  const printQR = async () => {
+    const content = generateQRContent();
+    if (!content) return;
+    try {
+      const finalCanvas = await getCompositeCanvas(512);
+      if (!finalCanvas) return;
+      const dataUri = finalCanvas.toDataURL("image/png");
+      const win = window.open("", "_blank");
+      if (!win) return;
+      win.document.write(
+        `<html><head><title>QR Code</title><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;}img{max-width:100%;}</style></head><body><img src="${dataUri}" onload="window.print()" /></body></html>`
+      );
+      win.document.close();
+    } catch {
+      showToast("Print failed");
+    }
+  };
+
+  const saveCompare = () => {
+    const canvas = canvasRef.current?.querySelector("canvas");
+    if (!canvas) return;
+    setCompareSnapshot(canvas.toDataURL("image/png"));
+    showToast("Saved as Design A");
+  };
+
+  const loadCompare = () => {
+    if (!compareSnapshot) return;
+    showToast("Showing Design A below");
+  };
+
+  const contentByteLength = new TextEncoder().encode(generateQRContent()).length;
 
   return (
     <div className="app-container">
@@ -304,18 +499,71 @@ END:VCALENDAR`;
         />
       </div>
       <div className="right-panel">
-        <QRPreview canvasRef={canvasRef} />
+        <QRPreview
+          canvasRef={canvasRef}
+          compareSnapshot={compareSnapshot}
+          onSaveCompare={saveCompare}
+          onLoadCompare={loadCompare}
+          contentByteLength={contentByteLength}
+          phonePreview={phonePreview}
+          onTogglePhone={() => setPhonePreview((p) => !p)}
+          backgroundImage={qrStyles.backgroundImage}
+        />
         <DownloadSection
           format={format}
           onFormatChange={setFormat}
           onDownload={downloadQRCode}
           onCopy={copyQRCode}
+          onCopyText={copyText}
+          onShare={shareQR}
+          onEmbed={embedQR}
+          onPrint={printQR}
+          onShowHistory={() => setShowHistory(true)}
+          onShowBatch={() => setShowBatch(true)}
+          onShowScan={() => setShowScan(true)}
+          canShare={"share" in navigator}
         />
       </div>
+
       {toast && (
         <div key={toast.key} className="toast" role="status" aria-live="polite">
           {toast.msg}
         </div>
+      )}
+
+      <OnboardingTooltip />
+
+      {showHistory && (
+        <HistoryPanel
+          history={history}
+          onRestore={(type, data, colors, styles) => {
+            setQrType(type);
+            setQrData(data);
+            setStyleState({ qrColors: colors, qrStyles: styles });
+            setShowHistory(false);
+          }}
+          onRemove={removeEntry}
+          onClear={clearHistory}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      {showBatch && (
+        <BatchPanel
+          qrColors={qrColors}
+          qrStyles={qrStyles}
+          onClose={() => setShowBatch(false)}
+        />
+      )}
+
+      {showScan && (
+        <ScanPanel
+          onUseContent={(content) => {
+            setQrType("URL");
+            setQrData({ url: content });
+          }}
+          onClose={() => setShowScan(false)}
+        />
       )}
     </div>
   );

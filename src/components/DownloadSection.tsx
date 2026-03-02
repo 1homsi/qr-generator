@@ -1,13 +1,30 @@
 import { memo } from "react";
-import { FiDownload, FiCopy } from "react-icons/fi";
+import {
+  FiDownload,
+  FiCopy,
+  FiShare2,
+  FiCode,
+  FiPrinter,
+  FiClock,
+  FiLayers,
+  FiCamera,
+} from "react-icons/fi";
 
-type Fmt = "png" | "svg" | "jpeg";
+export type Fmt = "png" | "svg" | "jpeg";
 
 interface DownloadSectionProps {
   format: Fmt;
   onFormatChange: (f: Fmt) => void;
   onDownload: () => void;
   onCopy: () => void;
+  onCopyText: () => void;
+  onShare: () => void;
+  onEmbed: () => void;
+  onPrint: () => void;
+  onShowHistory: () => void;
+  onShowBatch: () => void;
+  onShowScan: () => void;
+  canShare: boolean;
 }
 
 const FORMATS: { value: Fmt; label: string }[] = [
@@ -21,6 +38,14 @@ const DownloadSection = memo(function DownloadSection({
   onFormatChange,
   onDownload,
   onCopy,
+  onCopyText,
+  onShare,
+  onEmbed,
+  onPrint,
+  onShowHistory,
+  onShowBatch,
+  onShowScan,
+  canShare,
 }: DownloadSectionProps) {
   return (
     <div className="download-section">
@@ -36,6 +61,7 @@ const DownloadSection = memo(function DownloadSection({
           </button>
         ))}
       </div>
+
       <div className="download-actions">
         <button
           className="download-button"
@@ -52,6 +78,39 @@ const DownloadSection = memo(function DownloadSection({
         >
           <FiCopy />
           Copy
+        </button>
+      </div>
+
+      <div className="extra-actions">
+        <button className="extra-btn" onClick={onCopyText} title="Copy encoded text">
+          <FiCode />
+          Copy text
+        </button>
+        {canShare && (
+          <button className="extra-btn" onClick={onShare} title="Share">
+            <FiShare2 />
+            Share
+          </button>
+        )}
+        <button className="extra-btn" onClick={onEmbed} title="Get embed code">
+          <FiCode size={13} />
+          Embed
+        </button>
+        <button className="extra-btn" onClick={onPrint} title="Print / Save as PDF">
+          <FiPrinter />
+          Print
+        </button>
+        <button className="extra-btn" onClick={onShowHistory} title="History">
+          <FiClock />
+          History
+        </button>
+        <button className="extra-btn" onClick={onShowBatch} title="Batch generate">
+          <FiLayers />
+          Batch
+        </button>
+        <button className="extra-btn" onClick={onShowScan} title="Decode QR code">
+          <FiCamera />
+          Scan
         </button>
       </div>
     </div>
