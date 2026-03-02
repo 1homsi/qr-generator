@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import QRCodeStyling from "qr-code-styling";
 import QRTypeSelector from "./components/QRTypeSelector";
 import InputSection from "./components/InputSection";
@@ -20,7 +21,7 @@ import { applyPostProcessing } from "./utils/canvasUtils";
 import { COLOR_THEMES } from "./constants/themes";
 import type { QrData, QrColors, QrStyles, QrType, GradientType, DotStyle, CornerSquareStyle, CornerDotStyle } from "./types";
 import type { Fmt } from "./components/DownloadSection";
-import type { PreviewSize } from "./components/QRPreview";
+import type { PreviewSize, ColorBlindMode } from "./components/QRPreview";
 import ShortcutsPanel from "./components/ShortcutsPanel";
 import TemplateGallery from "./components/TemplateGallery";
 import type { QrTemplate } from "./components/TemplateGallery";
@@ -122,6 +123,11 @@ function App() {
   const [showReliability, setShowReliability] = useState(false);
   const [previewSize, setPreviewSize] = useState<PreviewSize>("md");
   const [invertPreview, setInvertPreview] = useState(false);
+  const [colorBlindMode, setColorBlindMode] = useState<ColorBlindMode>("none");
+  const [showFullscreen, setShowFullscreen] = useState(false);
+  const [captionText, setCaptionText] = useState("");
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   const [downloadSize, setDownloadSize] = useState(1024);
   const [currentSnapshot, setCurrentSnapshot] = useState<string | null>(null);
   const [recentColors, setRecentColors] = useState<string[]>(() => {
@@ -428,7 +434,25 @@ END:VCALENDAR`;
     srcCanvas.width = size;
     srcCanvas.height = size;
     srcCanvas.getContext("2d")!.drawImage(img, 0, 0);
-    return applyPostProcessing(srcCanvas, qrStyles);
+    const qrCanvas = await applyPostProcessing(srcCanvas, qrStyles);
+    if (!captionText.trim()) return qrCanvas;
+
+    // Render caption below QR
+    const fontSize = Math.max(14, Math.round(size * 0.032));
+    const padding = Math.round(size * 0.04);
+    const captionHeight = fontSize + padding * 2;
+    const final = document.createElement("canvas");
+    final.width = qrCanvas.width;
+    final.height = qrCanvas.height + captionHeight;
+    const ctx = final.getContext("2d")!;
+    ctx.fillStyle = qrColors.background || "#ffffff";
+    ctx.fillRect(0, 0, final.width, final.height);
+    ctx.drawImage(qrCanvas, 0, 0);
+    ctx.fillStyle = qrColors.foreground || "#000000";
+    ctx.font = `${fontSize}px system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(captionText.trim(), final.width / 2, qrCanvas.height + padding + fontSize);
+    return final;
   };
 
   const downloadQRCode = async (): Promise<void> => {
@@ -438,20 +462,32 @@ END:VCALENDAR`;
       return;
     }
     try {
-      if (format === "svg" && !qrStyles.backgroundImage && qrStyles.frameTemplate === "none") {
+      if (format === "svg" && !qrStyles.backgroundImage && qrStyles.frameTemplate === "none" && !captionText.trim()) {
         const qrCode = new QRCodeStyling(buildQRConfig(downloadSize, content));
         await qrCode.download({ name: "qr-code", extension: "svg" });
+      } else if (format === "pdf") {
+        const finalCanvas = await getCompositeCanvas(downloadSize);
+        if (!finalCanvas) return;
+        const { jsPDF } = await import("jspdf");
+        const pdf = new jsPDF({ unit: "px", format: [finalCanvas.width, finalCanvas.height] });
+        const dataUri = finalCanvas.toDataURL("image/png");
+        pdf.addImage(dataUri, "PNG", 0, 0, finalCanvas.width, finalCanvas.height);
+        pdf.save("qr-code.pdf");
       } else {
         const finalCanvas = await getCompositeCanvas(downloadSize);
         if (!finalCanvas) return;
-        const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+        const mimeType =
+          format === "jpeg" ? "image/jpeg" :
+          format === "webp" ? "image/webp" :
+          "image/png";
+        const ext = format === "jpeg" ? "jpg" : format;
         const blob = await new Promise<Blob>((resolve) =>
           finalCanvas.toBlob((b) => resolve(b!), mimeType, 0.95)
         );
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `qr-code.${format === "jpeg" ? "jpg" : format}`;
+        a.download = `qr-code.${ext}`;
         a.click();
         URL.revokeObjectURL(url);
       }
@@ -580,6 +616,16 @@ END:VCALENDAR`;
     setSavedDesigns((prev) => prev.filter((d) => d.id !== id));
   };
 
+  const renameDesign = (id: string, name: string) => {
+    setSavedDesigns((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, name } : d))
+    );
+  };
+
+  const reorderDesigns = (next: SavedDesign[]) => {
+    setSavedDesigns(next);
+  };
+
   const addRecentColor = useCallback((color: string) => {
     setRecentColors((prev) => {
       if (prev[0] === color) return prev;
@@ -641,6 +687,13 @@ END:VCALENDAR`;
     return canvas ? canvas.toDataURL("image/png", 0.85) : null;
   };
 
+  const openFullscreen = () => {
+    const snap = captureSnapshot();
+    if (!snap) { showToast("Generate a QR code first"); return; }
+    setCurrentSnapshot(snap);
+    setShowFullscreen(true);
+  };
+
   const openSurface = () => {
     const snap = captureSnapshot();
     if (!snap) { showToast("Generate a QR code first"); return; }
@@ -671,39 +724,48 @@ END:VCALENDAR`;
     <div className="app-container">
       <ThemeToggle isDark={isDark} onToggle={() => setIsDark((d) => !d)} />
       <motion.div
-        className="left-panel"
+        className={`left-panel${leftCollapsed ? " panel-collapsed" : ""}`}
         initial={{ x: -40, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.35, ease: "easeOut" }}
       >
-        <h1 className="app-title">QR Generator</h1>
-        <p className="app-subtitle">Generate &amp; customize QR codes</p>
-        <QRTypeSelector qrType={qrType} setQrType={setQrType} />
-        <InputSection
-          qrType={qrType}
-          qrData={qrData}
-          setQrData={setQrData}
-          onAutoDetect={(type, data) => {
-            setQrType(type);
-            setQrData(data as QrData);
-            const labels: Partial<Record<typeof type, string>> = {
-              SPOTIFY: "Spotify",
-              YOUTUBE: "YouTube",
-              WHATSAPP: "WhatsApp",
-              ZOOM: "Zoom",
-              APPSTORE: "App Store",
-            };
-            showToast(`Switched to ${labels[type] ?? type} QR`);
-          }}
-        />
-        <CustomizationSection
-          qrColors={qrColors}
-          setQrColors={setQrColors}
-          qrStyles={qrStyles}
-          setQrStyles={setQrStyles}
-          recentColors={recentColors}
-          onColorUsed={addRecentColor}
-        />
+        <button
+          className="panel-collapse-btn panel-collapse-btn--left"
+          onClick={() => setLeftCollapsed((v) => !v)}
+          title={leftCollapsed ? "Expand panel" : "Collapse panel"}
+        >
+          {leftCollapsed ? <FiChevronRight size={14} /> : <FiChevronLeft size={14} />}
+        </button>
+        <div className="panel-inner">
+          <h1 className="app-title">QR Generator</h1>
+          <p className="app-subtitle">Generate &amp; customize QR codes</p>
+          <QRTypeSelector qrType={qrType} setQrType={setQrType} />
+          <InputSection
+            qrType={qrType}
+            qrData={qrData}
+            setQrData={setQrData}
+            onAutoDetect={(type, data) => {
+              setQrType(type);
+              setQrData(data as QrData);
+              const labels: Partial<Record<typeof type, string>> = {
+                SPOTIFY: "Spotify",
+                YOUTUBE: "YouTube",
+                WHATSAPP: "WhatsApp",
+                ZOOM: "Zoom",
+                APPSTORE: "App Store",
+              };
+              showToast(`Switched to ${labels[type] ?? type} QR`);
+            }}
+          />
+          <CustomizationSection
+            qrColors={qrColors}
+            setQrColors={setQrColors}
+            qrStyles={qrStyles}
+            setQrStyles={setQrStyles}
+            recentColors={recentColors}
+            onColorUsed={addRecentColor}
+          />
+        </div>
       </motion.div>
       <motion.div
         className="center-panel"
@@ -718,6 +780,7 @@ END:VCALENDAR`;
             backgroundImage={qrStyles.backgroundImage}
             previewSize={previewSize}
             invertPreview={invertPreview}
+            colorBlindMode={colorBlindMode}
           />
           <DownloadSection
             format={format}
@@ -726,15 +789,25 @@ END:VCALENDAR`;
             onCopy={copyQRCode}
             downloadSize={downloadSize}
             onSizeChange={setDownloadSize}
+            captionText={captionText}
+            onCaptionChange={setCaptionText}
           />
         </div>
       </motion.div>
       <motion.div
-        className="right-panel"
+        className={`right-panel${rightCollapsed ? " panel-collapsed" : ""}`}
         initial={{ x: 40, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.35, delay: 0.05, ease: "easeOut" }}
       >
+        <button
+          className="panel-collapse-btn panel-collapse-btn--right"
+          onClick={() => setRightCollapsed((v) => !v)}
+          title={rightCollapsed ? "Expand panel" : "Collapse panel"}
+        >
+          {rightCollapsed ? <FiChevronLeft size={14} /> : <FiChevronRight size={14} />}
+        </button>
+        <div className="panel-inner">
         <ExtraActions
           onCopyText={copyText}
           onShare={shareQR}
@@ -750,11 +823,14 @@ END:VCALENDAR`;
           onShowTemplates={() => setShowTemplates(true)}
           onShowSurface={openSurface}
           onShowReliability={openReliability}
+          onShowFullscreen={openFullscreen}
           canShare={"share" in navigator}
           phonePreview={phonePreview}
           onTogglePhone={() => setPhonePreview((p) => !p)}
           invertPreview={invertPreview}
           onToggleInvert={() => setInvertPreview((v) => !v)}
+          colorBlindMode={colorBlindMode}
+          onColorBlindChange={setColorBlindMode}
           previewSize={previewSize}
           onSizeChange={setPreviewSize}
         />
@@ -763,7 +839,10 @@ END:VCALENDAR`;
           onLoad={loadDesign}
           onRemove={removeDesign}
           onSave={saveDesign}
+          onRename={renameDesign}
+          onReorder={reorderDesigns}
         />
+        </div>
       </motion.div>
 
       <AnimatePresence>
@@ -877,6 +956,29 @@ END:VCALENDAR`;
       <AnimatePresence>
         {showReliability && currentSnapshot && (
           <ReliabilityPanel snapshot={currentSnapshot} onClose={() => setShowReliability(false)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showFullscreen && currentSnapshot && (
+          <motion.div
+            className="modal-overlay fullscreen-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowFullscreen(false)}
+          >
+            <motion.img
+              src={currentSnapshot}
+              className="fullscreen-qr-img"
+              alt="QR code fullscreen"
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

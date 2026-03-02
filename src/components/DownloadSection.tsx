@@ -2,7 +2,7 @@ import { memo } from "react";
 import { motion } from "motion/react";
 import { FiDownload, FiCopy } from "react-icons/fi";
 
-export type Fmt = "png" | "svg" | "jpeg";
+export type Fmt = "png" | "svg" | "jpeg" | "webp" | "pdf";
 
 interface DownloadSectionProps {
   format: Fmt;
@@ -11,12 +11,16 @@ interface DownloadSectionProps {
   onCopy: () => void;
   downloadSize: number;
   onSizeChange: (size: number) => void;
+  captionText: string;
+  onCaptionChange: (text: string) => void;
 }
 
 const FORMATS: { value: Fmt; label: string }[] = [
   { value: "png", label: "PNG" },
   { value: "svg", label: "SVG" },
   { value: "jpeg", label: "JPEG" },
+  { value: "webp", label: "WebP" },
+  { value: "pdf", label: "PDF" },
 ];
 
 const SIZES: { value: number; label: string; sub: string }[] = [
@@ -33,7 +37,11 @@ const DownloadSection = memo(function DownloadSection({
   onCopy,
   downloadSize,
   onSizeChange,
+  captionText,
+  onCaptionChange,
 }: DownloadSectionProps) {
+  const hideSizes = format === "svg" || format === "pdf";
+
   return (
     <div className="download-section">
       <div className="format-selector" role="group" aria-label="Download format">
@@ -58,29 +66,42 @@ const DownloadSection = memo(function DownloadSection({
         ))}
       </div>
 
-      <div className="size-selector" role="group" aria-label="Download size">
-        {SIZES.map((s) => (
-          <motion.button
-            key={s.value}
-            className={`size-btn ${downloadSize === s.value ? "active" : ""}`}
-            onClick={() => onSizeChange(s.value)}
-            aria-pressed={downloadSize === s.value}
-            whileTap={{ scale: 0.95 }}
-            style={{ position: "relative" }}
-          >
-            {downloadSize === s.value && (
-              <motion.span
-                layoutId="size-pill"
-                className="size-pill"
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              />
-            )}
-            <span style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 1 }}>
-              <span>{s.label}</span>
-              <span style={{ fontSize: 10, opacity: 0.7 }}>{s.sub}</span>
-            </span>
-          </motion.button>
-        ))}
+      {!hideSizes && (
+        <div className="size-selector" role="group" aria-label="Download size">
+          {SIZES.map((s) => (
+            <motion.button
+              key={s.value}
+              className={`size-btn ${downloadSize === s.value ? "active" : ""}`}
+              onClick={() => onSizeChange(s.value)}
+              aria-pressed={downloadSize === s.value}
+              whileTap={{ scale: 0.95 }}
+              style={{ position: "relative" }}
+            >
+              {downloadSize === s.value && (
+                <motion.span
+                  layoutId="size-pill"
+                  className="size-pill"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+              <span style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+                <span>{s.label}</span>
+                <span style={{ fontSize: 10, opacity: 0.7 }}>{s.sub}</span>
+              </span>
+            </motion.button>
+          ))}
+        </div>
+      )}
+
+      <div className="caption-row">
+        <input
+          type="text"
+          className="caption-input"
+          placeholder="Caption (optional, printed below QR)"
+          value={captionText}
+          onChange={(e) => onCaptionChange(e.target.value)}
+          maxLength={80}
+        />
       </div>
 
       <div className="download-actions">

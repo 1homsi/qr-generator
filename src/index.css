@@ -167,12 +167,30 @@ body {
   width: 340px;
   flex-shrink: 0;
   background: var(--panel-bg);
-  padding: 16px 24px 24px;
   border-right: 1px solid var(--border);
-  overflow-y: auto;
+  overflow: hidden;
+  position: relative;
   transition:
+    width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
     background-color 0.2s ease,
     border-color 0.2s ease;
+}
+
+.left-panel .panel-inner {
+  padding: 16px 24px 24px;
+  min-width: 292px;
+  height: 100%;
+  overflow-y: auto;
+  transition: opacity 0.2s;
+}
+
+.left-panel.panel-collapsed {
+  width: 40px;
+}
+
+.left-panel.panel-collapsed .panel-inner {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .center-panel {
@@ -197,12 +215,64 @@ body {
   width: 340px;
   flex-shrink: 0;
   background: var(--panel-bg);
-  padding: 56px 24px 24px;
   border-left: 1px solid var(--border);
-  overflow-y: auto;
+  overflow: hidden;
+  position: relative;
   transition:
+    width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
     background-color 0.2s ease,
     border-color 0.2s ease;
+}
+
+.right-panel .panel-inner {
+  padding: 56px 24px 24px;
+  min-width: 292px;
+  height: 100%;
+  overflow-y: auto;
+  transition: opacity 0.2s;
+}
+
+.right-panel.panel-collapsed {
+  width: 40px;
+}
+
+.right-panel.panel-collapsed .panel-inner {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Panel collapse toggle button ─────────────────────── */
+
+.panel-collapse-btn {
+  position: absolute;
+  top: 16px;
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.panel-collapse-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface);
+  border-color: var(--primary-color);
+}
+
+.panel-collapse-btn--left {
+  right: 8px;
+}
+
+.panel-collapse-btn--right {
+  left: 8px;
 }
 
 @media (max-width: 900px) {
@@ -223,7 +293,12 @@ body {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border);
+    overflow-y: visible;
+  }
+
+  .left-panel .panel-inner {
     padding: 16px;
+    min-width: unset;
     overflow-y: visible;
   }
 
@@ -236,7 +311,11 @@ body {
     width: 100%;
     border-left: none;
     border-top: 1px solid var(--border);
+  }
+
+  .right-panel .panel-inner {
     padding: 24px 16px;
+    min-width: unset;
   }
 }
 
@@ -1849,6 +1928,34 @@ body {
   font-size: 10px;
   color: var(--text-muted);
   line-height: 1.2;
+  cursor: text;
+}
+
+.saved-design-name:hover {
+  color: var(--primary-color);
+  text-decoration: underline dotted;
+}
+
+.saved-design-name-input {
+  font-size: 10px;
+  color: var(--text-primary);
+  line-height: 1.2;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--primary-color);
+  border-radius: 3px;
+  padding: 1px 3px;
+  text-align: center;
+  outline: none;
+}
+
+.sd-dragging {
+  opacity: 0.4;
+}
+
+.sd-drag-over > .saved-design-thumb-btn {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-color);
 }
 
 .saved-design-delete-btn {
@@ -2375,4 +2482,68 @@ body {
   font-weight: 600;
   color: var(--text-muted);
   text-align: center;
+}
+
+/* ── Caption input ────────────────────────────────────── */
+
+.caption-row {
+  width: 100%;
+}
+
+.caption-input {
+  width: 100%;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.caption-input:focus {
+  border-color: var(--primary-color);
+}
+
+/* ── Color blindness selector ─────────────────────────── */
+
+.cb-select-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+
+.cb-select {
+  flex: 1;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.cb-select:focus {
+  border-color: var(--primary-color);
+}
+
+/* ── Fullscreen QR overlay ────────────────────────────── */
+
+.fullscreen-overlay {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.fullscreen-qr-img {
+  max-width: min(90vw, 90vh);
+  max-height: min(90vw, 90vh);
+  border-radius: 16px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.4);
+  cursor: default;
 }

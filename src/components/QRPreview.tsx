@@ -2,6 +2,8 @@ import { memo, RefObject } from "react";
 import { motion } from "motion/react";
 
 export type PreviewSize = "sm" | "md" | "lg";
+export type ColorBlindMode = "none" | "deuteranopia" | "protanopia" | "tritanopia" | "achromatopsia";
+
 const SIZE_PX: Record<PreviewSize, number> = { sm: 240, md: 360, lg: 480 };
 
 interface QRPreviewProps {
@@ -10,7 +12,33 @@ interface QRPreviewProps {
   backgroundImage: string | null;
   previewSize: PreviewSize;
   invertPreview: boolean;
+  colorBlindMode: ColorBlindMode;
 }
+
+// SVG color matrix filters for color blindness simulation
+const SVG_FILTERS = (
+  <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true">
+    <defs>
+      <filter id="cb-deuteranopia">
+        <feColorMatrix type="matrix" values="0.625 0.375 0 0 0  0.7 0.3 0 0 0  0 0.3 0.7 0 0  0 0 0 1 0" />
+      </filter>
+      <filter id="cb-protanopia">
+        <feColorMatrix type="matrix" values="0.567 0.433 0 0 0  0.558 0.442 0 0 0  0 0.242 0.758 0 0  0 0 0 1 0" />
+      </filter>
+      <filter id="cb-tritanopia">
+        <feColorMatrix type="matrix" values="0.95 0.05 0 0 0  0 0.433 0.567 0 0  0 0.475 0.525 0 0  0 0 0 1 0" />
+      </filter>
+    </defs>
+  </svg>
+);
+
+const FILTER_MAP: Record<ColorBlindMode, string | undefined> = {
+  none: undefined,
+  deuteranopia: "url(#cb-deuteranopia)",
+  protanopia: "url(#cb-protanopia)",
+  tritanopia: "url(#cb-tritanopia)",
+  achromatopsia: "grayscale(100%)",
+};
 
 const QRPreview = memo(function QRPreview({
   canvasRef,
@@ -18,11 +46,19 @@ const QRPreview = memo(function QRPreview({
   backgroundImage,
   previewSize,
   invertPreview,
+  colorBlindMode,
 }: QRPreviewProps) {
   const px = SIZE_PX[previewSize];
+  const cbFilter = FILTER_MAP[colorBlindMode];
+
+  const filters = [
+    invertPreview ? "invert(1)" : undefined,
+    cbFilter,
+  ].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className="preview-wrapper">
+      {SVG_FILTERS}
       <motion.div
         layout
         className={phonePreview ? "phone-frame-wrapper" : undefined}
@@ -49,7 +85,7 @@ const QRPreview = memo(function QRPreview({
                     borderRadius: 8,
                   }
                 : {}),
-              ...(invertPreview ? { filter: "invert(1)" } : {}),
+              ...(filters ? { filter: filters } : {}),
             }}
           >
             <div ref={canvasRef} />

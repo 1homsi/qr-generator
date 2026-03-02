@@ -16,8 +16,11 @@ import {
   FiLayout,
   FiImage,
   FiActivity,
+  FiMaximize2,
+  FiEye,
 } from "react-icons/fi";
 import type { PreviewSize } from "./QRPreview";
+import type { ColorBlindMode } from "./QRPreview";
 
 interface ExtraActionsProps {
   onCopyText: () => void;
@@ -34,11 +37,14 @@ interface ExtraActionsProps {
   onShowTemplates: () => void;
   onShowSurface: () => void;
   onShowReliability: () => void;
+  onShowFullscreen: () => void;
   canShare: boolean;
   phonePreview: boolean;
   onTogglePhone: () => void;
   invertPreview: boolean;
   onToggleInvert: () => void;
+  colorBlindMode: ColorBlindMode;
+  onColorBlindChange: (mode: ColorBlindMode) => void;
   previewSize: PreviewSize;
   onSizeChange: (s: PreviewSize) => void;
 }
@@ -64,12 +70,21 @@ const Btn = ({
   </motion.button>
 );
 
+const CB_OPTIONS: { value: ColorBlindMode; label: string }[] = [
+  { value: "none", label: "Normal" },
+  { value: "deuteranopia", label: "Deuteranopia" },
+  { value: "protanopia", label: "Protanopia" },
+  { value: "tritanopia", label: "Tritanopia" },
+  { value: "achromatopsia", label: "Achromatopsia" },
+];
+
 const ExtraActions = memo(function ExtraActions(props: ExtraActionsProps) {
   const {
     onCopyText, onShare, onEmbed, onPrint, onShowHistory, onShowBatch, onShowScan,
     onClearAll, onRandomize, onShareLink, onShowShortcuts, onShowTemplates,
-    onShowSurface, onShowReliability, canShare, phonePreview, onTogglePhone,
-    invertPreview, onToggleInvert, previewSize, onSizeChange,
+    onShowSurface, onShowReliability, onShowFullscreen, canShare, phonePreview,
+    onTogglePhone, invertPreview, onToggleInvert, colorBlindMode, onColorBlindChange,
+    previewSize, onSizeChange,
   } = props;
 
   return (
@@ -87,8 +102,25 @@ const ExtraActions = memo(function ExtraActions(props: ExtraActionsProps) {
           <FiMoon />
           Dark bg
         </Btn>
+        <Btn onClick={onShowFullscreen} title="Fullscreen preview">
+          <FiMaximize2 />
+          Fullscreen
+        </Btn>
       </div>
 
+      <div className="cb-select-row">
+        <FiEye size={13} style={{ flexShrink: 0, color: "var(--text-muted)" }} />
+        <select
+          className="cb-select"
+          value={colorBlindMode}
+          onChange={(e) => onColorBlindChange(e.target.value as ColorBlindMode)}
+          title="Color blindness simulation"
+        >
+          {CB_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
 
       {/* Export */}
       <p className="extra-actions-group-label">Export</p>
