@@ -8,6 +8,8 @@ import DownloadSection from "./components/DownloadSection";
 import ThemeToggle from "./components/ThemeToggle";
 import type { QrData, QrColors, QrStyles, QrType, GradientType } from "./types";
 
+type Fmt = "png" | "svg" | "jpeg";
+
 interface GradientConfig {
   type: GradientType;
   rotation: number;
@@ -49,6 +51,7 @@ function App() {
 
   const [qrData, setQrData] = useState<QrData>({});
   const [qrType, setQrType] = useState<QrType>("URL");
+  const [format, setFormat] = useState<Fmt>("png");
   const [qrColors, setQrColors] = useState<QrColors>({
     foreground: "#000000",
     background: "#ffffff",
@@ -67,12 +70,22 @@ function App() {
     logoSize: 0.3,
     logoMargin: 10,
   });
+  const [toast, setToast] = useState<{ msg: string; key: number } | null>(
+    null
+  );
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     generateQRCode();
   }, [qrData, qrType, qrColors, qrStyles]);
+
+  const showToast = (msg: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, key: Date.now() });
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  };
 
   const generateQRContent = (): string => {
     switch (qrType) {
@@ -243,14 +256,35 @@ END:VCALENDAR`;
   const downloadQRCode = async (): Promise<void> => {
     const content = generateQRContent();
     if (!content) {
-      alert("Please fill in the required fields");
+      showToast("Please fill in the required fields");
+      return;
+    }
+    try {
+      const qrCode = new QRCodeStyling(buildQRConfig(1024, content));
+      await qrCode.download({ name: "qr-code", extension: format });
+      showToast(`Downloaded as ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error("Error downloading QR code:", error);
+    }
+  };
+
+  const copyQRCode = async (): Promise<void> => {
+    const content = generateQRContent();
+    if (!content) {
+      showToast("Please fill in the required fields");
       return;
     }
     try {
       const qrCode = new QRCodeStyling(buildQRConfig(512, content));
-      qrCode.download({ name: "qr-code", extension: "png" });
+      const blob = await qrCode.getRawData("png");
+      if (!blob) return;
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
+      showToast("Copied to clipboard!");
     } catch (error) {
-      console.error("Error downloading QR code:", error);
+      console.error("Error copying QR code:", error);
+      showToast("Copy failed — try downloading instead");
     }
   };
 
@@ -259,6 +293,7 @@ END:VCALENDAR`;
       <ThemeToggle isDark={isDark} onToggle={() => setIsDark((d) => !d)} />
       <div className="left-panel">
         <h1 className="app-title">QR Generator</h1>
+        <p className="app-subtitle">Generate &amp; customize QR codes</p>
         <QRTypeSelector qrType={qrType} setQrType={setQrType} />
         <InputSection qrType={qrType} qrData={qrData} setQrData={setQrData} />
         <CustomizationSection
@@ -270,8 +305,18 @@ END:VCALENDAR`;
       </div>
       <div className="right-panel">
         <QRPreview canvasRef={canvasRef} />
-        <DownloadSection onDownload={downloadQRCode} />
+        <DownloadSection
+          format={format}
+          onFormatChange={setFormat}
+          onDownload={downloadQRCode}
+          onCopy={copyQRCode}
+        />
       </div>
+      {toast && (
+        <div key={toast.key} className="toast" role="status" aria-live="polite">
+          {toast.msg}
+        </div>
+      )}
     </div>
   );
 }

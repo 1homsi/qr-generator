@@ -6,8 +6,10 @@ interface QRPreviewProps {
 
 const QRPreview = memo(function QRPreview({ canvasRef }: QRPreviewProps) {
   return (
-    <div className="qr-preview">
-      <div ref={canvasRef} />
+    <div className="qr-card">
+      <div className="qr-preview">
+        <div ref={canvasRef} />
+      </div>
     </div>
   );
 });

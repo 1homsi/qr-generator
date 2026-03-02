@@ -477,7 +477,10 @@ const InputSection = memo(function InputSection({
   return (
     <div className="input-section">
       <h3>{TITLES[qrType]}</h3>
-      <p>(Your QR Code will be generated automatically)</p>
+      <p>
+        <span className="live-dot" aria-hidden="true" />
+        Updates as you type
+      </p>
       {renderInputs()}
     </div>
   );

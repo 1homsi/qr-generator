@@ -47,7 +47,7 @@ const QRTypeSelector = memo(function QRTypeSelector({
   setQrType,
 }: QRTypeSelectorProps) {
   return (
-    <div className="qr-types">
+    <div className="qr-type-strip" role="group" aria-label="QR code type">
       {QR_TYPES.map((type) => (
         <button
           key={type.id}

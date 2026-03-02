@@ -135,6 +135,12 @@ body {
   font-size: 24px;
   font-weight: 700;
   color: var(--primary-color);
+  margin-bottom: 2px;
+}
+
+.app-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
   margin-bottom: 16px;
 }
 
@@ -155,6 +161,7 @@ body {
 
 .left-panel {
   flex: 1;
+  max-width: 420px;
   background: var(--panel-bg);
   padding: 16px 24px 24px 24px;
   border-right: 1px solid var(--border);
@@ -195,21 +202,32 @@ body {
 
 /* ── QR type selector ─────────────────────────────────── */
 
+/* Main type selector: horizontal scroll strip */
+.qr-type-strip {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.qr-type-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.qr-type-strip .qr-type-btn {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  gap: 5px;
+}
+
+/* Grid used inside customization panel */
 .qr-types {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 32px;
-}
-
-@media (max-width: 768px) {
-  .qr-types {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-}
-
-.customization-group .qr-types {
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-bottom: 0;
@@ -280,9 +298,27 @@ body {
 }
 
 .input-section p {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-muted);
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #10b981;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0;
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .url-input {
@@ -639,37 +675,97 @@ body {
 
 /* ── QR preview & download ────────────────────────────── */
 
+.qr-card {
+  background: var(--panel-bg);
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 1px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+[data-theme="dark"] .qr-card {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
 .qr-preview {
-  width: 400px;
-  height: 400px;
+  width: 320px;
+  height: 320px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 32px;
   position: relative;
   overflow: hidden;
+  border-radius: 8px;
 }
 
 @media (max-width: 768px) {
   .qr-preview {
-    width: 280px;
-    height: 280px;
-    margin-bottom: 24px;
+    width: 260px;
+    height: 260px;
   }
 }
 
 .download-section {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.format-selector {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.format-btn {
+  flex: 1;
+  padding: 7px 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 0.02em;
+}
+
+.format-btn.active {
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.format-btn:hover:not(.active) {
+  color: var(--text-secondary);
+}
+
+.download-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .download-button {
-  width: 100%;
+  flex: 1;
   background-color: var(--primary-color);
   color: white;
   border: none;
   border-radius: 8px;
-  padding: 10px 24px;
+  padding: 10px 16px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -677,9 +773,123 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .download-button:hover {
   background-color: var(--primary-hover);
+}
+
+.copy-button {
+  flex: 1;
+  background: var(--surface);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.copy-button:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* ── Accordion ────────────────────────────────────────── */
+
+.accordion-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.accordion-btn h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.accordion-chevron {
+  color: var(--text-faint);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.accordion-chevron.open {
+  transform: rotate(180deg);
+}
+
+.accordion-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+
+.accordion-body.open {
+  grid-template-rows: 1fr;
+}
+
+.accordion-inner {
+  overflow: hidden;
+}
+
+.accordion-inner > div {
+  padding-top: 16px;
+}
+
+/* ── Toast ────────────────────────────────────────────── */
+
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-primary);
+  color: var(--panel-bg);
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: toast-in 0.25s ease;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ── Focus visible ring ───────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.url-input:focus-visible,
+.custom-select:focus-visible {
+  outline: none;
 }
