@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import QRCodeStyling from "qr-code-styling";
 import QRTypeSelector from "./components/QRTypeSelector";
 import InputSection from "./components/InputSection";
@@ -10,6 +11,9 @@ import HistoryPanel from "./components/HistoryPanel";
 import BatchPanel from "./components/BatchPanel";
 import ScanPanel from "./components/ScanPanel";
 import OnboardingTooltip from "./components/OnboardingTooltip";
+import SavedDesigns from "./components/SavedDesigns";
+import type { SavedDesign } from "./components/SavedDesigns";
+import ExtraActions from "./components/ExtraActions";
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useQrHistory } from "./hooks/useQrHistory";
 import { applyPostProcessing } from "./utils/canvasUtils";
@@ -34,6 +38,11 @@ const getGradientConfig = (
     color,
   })),
 });
+
+const ADJS = ["Brave", "Cosmic", "Dizzy", "Epic", "Fuzzy", "Glowing", "Happy", "Icy", "Jade", "Kind"];
+const NOUNS = ["Tiger", "Panda", "Falcon", "Orca", "Rhino", "Lynx", "Viper", "Crane"];
+const randomName = () =>
+  `${ADJS[Math.floor(Math.random() * ADJS.length)]} ${NOUNS[Math.floor(Math.random() * NOUNS.length)]}`;
 
 const CRYPTO_SCHEMES: Record<string, string> = {
   BTC: "bitcoin",
@@ -88,7 +97,15 @@ function App() {
   const [format, setFormat] = useState<Fmt>("png");
   const [toast, setToast] = useState<{ msg: string; key: number } | null>(null);
   const [phonePreview, setPhonePreview] = useState(false);
-  const [compareSnapshot, setCompareSnapshot] = useState<string | null>(null);
+  const [savedDesigns, setSavedDesigns] = useState<SavedDesign[]>(() => {
+    try {
+      const raw = localStorage.getItem("qr-saved-designs");
+      return raw ? (JSON.parse(raw) as SavedDesign[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [previewDesign, setPreviewDesign] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showBatch, setShowBatch] = useState(false);
   const [showScan, setShowScan] = useState(false);
@@ -123,6 +140,10 @@ function App() {
     },
     [setStyleState]
   );
+
+  useEffect(() => {
+    localStorage.setItem("qr-saved-designs", JSON.stringify(savedDesigns));
+  }, [savedDesigns]);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -469,16 +490,26 @@ END:VCALENDAR`;
     }
   };
 
-  const saveCompare = () => {
+  const saveDesign = () => {
     const canvas = canvasRef.current?.querySelector("canvas");
     if (!canvas) return;
-    setCompareSnapshot(canvas.toDataURL("image/png"));
-    showToast("Saved as Design A");
+    const snapshot = canvas.toDataURL("image/png", 0.7);
+    const design: SavedDesign = {
+      id: Date.now().toString(),
+      name: randomName(),
+      snapshot,
+    };
+    setSavedDesigns((prev) => [...prev, design]);
+    showToast(`Saved as "${design.name}"`);
   };
 
-  const loadCompare = () => {
-    if (!compareSnapshot) return;
-    showToast("Showing Design A below");
+  const loadDesign = (id: string) => {
+    const design = savedDesigns.find((d) => d.id === id);
+    if (design) setPreviewDesign(design.snapshot);
+  };
+
+  const removeDesign = (id: string) => {
+    setSavedDesigns((prev) => prev.filter((d) => d.id !== id));
   };
 
   const contentByteLength = new TextEncoder().encode(generateQRContent()).length;
@@ -486,7 +517,12 @@ END:VCALENDAR`;
   return (
     <div className="app-container">
       <ThemeToggle isDark={isDark} onToggle={() => setIsDark((d) => !d)} />
-      <div className="left-panel">
+      <motion.div
+        className="left-panel"
+        initial={{ x: -40, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+      >
         <h1 className="app-title">QR Generator</h1>
         <p className="app-subtitle">Generate &amp; customize QR codes</p>
         <QRTypeSelector qrType={qrType} setQrType={setQrType} />
@@ -497,23 +533,34 @@ END:VCALENDAR`;
           qrStyles={qrStyles}
           setQrStyles={setQrStyles}
         />
-      </div>
-      <div className="right-panel">
-        <QRPreview
-          canvasRef={canvasRef}
-          compareSnapshot={compareSnapshot}
-          onSaveCompare={saveCompare}
-          onLoadCompare={loadCompare}
-          contentByteLength={contentByteLength}
-          phonePreview={phonePreview}
-          onTogglePhone={() => setPhonePreview((p) => !p)}
-          backgroundImage={qrStyles.backgroundImage}
-        />
-        <DownloadSection
-          format={format}
-          onFormatChange={setFormat}
-          onDownload={downloadQRCode}
-          onCopy={copyQRCode}
+      </motion.div>
+      <motion.div
+        className="center-panel"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.08, ease: "easeOut" }}
+      >
+        <div className="center-panel-content">
+          <QRPreview
+            canvasRef={canvasRef}
+            phonePreview={phonePreview}
+            backgroundImage={qrStyles.backgroundImage}
+          />
+          <DownloadSection
+            format={format}
+            onFormatChange={setFormat}
+            onDownload={downloadQRCode}
+            onCopy={copyQRCode}
+          />
+        </div>
+      </motion.div>
+      <motion.div
+        className="right-panel"
+        initial={{ x: 40, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.35, delay: 0.05, ease: "easeOut" }}
+      >
+        <ExtraActions
           onCopyText={copyText}
           onShare={shareQR}
           onEmbed={embedQR}
@@ -522,49 +569,105 @@ END:VCALENDAR`;
           onShowBatch={() => setShowBatch(true)}
           onShowScan={() => setShowScan(true)}
           canShare={"share" in navigator}
+          phonePreview={phonePreview}
+          onTogglePhone={() => setPhonePreview((p) => !p)}
         />
-      </div>
+        <SavedDesigns
+          designs={savedDesigns}
+          onLoad={loadDesign}
+          onRemove={removeDesign}
+          onSave={saveDesign}
+        />
+      </motion.div>
 
-      {toast && (
-        <div key={toast.key} className="toast" role="status" aria-live="polite">
-          {toast.msg}
-        </div>
-      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key={toast.key}
+            className="toast"
+            role="status"
+            aria-live="polite"
+            style={{ x: "-50%" }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          >
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <OnboardingTooltip />
 
-      {showHistory && (
-        <HistoryPanel
-          history={history}
-          onRestore={(type, data, colors, styles) => {
-            setQrType(type);
-            setQrData(data);
-            setStyleState({ qrColors: colors, qrStyles: styles });
-            setShowHistory(false);
-          }}
-          onRemove={removeEntry}
-          onClear={clearHistory}
-          onClose={() => setShowHistory(false)}
-        />
-      )}
+      <AnimatePresence>
+        {previewDesign && (
+          <motion.div
+            className="modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPreviewDesign(null)}
+          >
+            <motion.div
+              className="design-preview-modal"
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 32 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img src={previewDesign} alt="Saved design preview" />
+              <motion.button
+                className="design-preview-close"
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setPreviewDesign(null)}
+              >
+                Close
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {showBatch && (
-        <BatchPanel
-          qrColors={qrColors}
-          qrStyles={qrStyles}
-          onClose={() => setShowBatch(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showHistory && (
+          <HistoryPanel
+            history={history}
+            onRestore={(type, data, colors, styles) => {
+              setQrType(type);
+              setQrData(data);
+              setStyleState({ qrColors: colors, qrStyles: styles });
+              setShowHistory(false);
+            }}
+            onRemove={removeEntry}
+            onClear={clearHistory}
+            onClose={() => setShowHistory(false)}
+          />
+        )}
+      </AnimatePresence>
 
-      {showScan && (
-        <ScanPanel
-          onUseContent={(content) => {
-            setQrType("URL");
-            setQrData({ url: content });
-          }}
-          onClose={() => setShowScan(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showBatch && (
+          <BatchPanel
+            qrColors={qrColors}
+            qrStyles={qrStyles}
+            onClose={() => setShowBatch(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showScan && (
+          <ScanPanel
+            onUseContent={(content) => {
+              setQrType("URL");
+              setQrData({ url: content });
+            }}
+            onClose={() => setShowScan(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

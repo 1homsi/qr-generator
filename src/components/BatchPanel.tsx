@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { motion } from "motion/react";
 import { useDropzone } from "react-dropzone";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -107,11 +108,20 @@ export default function BatchPanel({ qrColors, qrStyles, onClose }: BatchPanelPr
   };
 
   return (
-    <div
+    <motion.div
       className="modal-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="modal batch-modal">
+      <motion.div
+        className="modal batch-modal"
+        initial={{ scale: 0.94, y: 12, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.94, y: 12, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 400, damping: 32 }}
+      >
         <div className="modal-header">
           <div className="modal-title-row">
             <FiLayers />
@@ -187,7 +197,7 @@ export default function BatchPanel({ qrColors, qrStyles, onClose }: BatchPanelPr
             )}
           </>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

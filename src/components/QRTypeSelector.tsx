@@ -1,4 +1,5 @@
 import { memo, ReactNode } from "react";
+import { motion } from "motion/react";
 import {
   FiUser,
   FiFileText,
@@ -49,16 +50,27 @@ const QRTypeSelector = memo(function QRTypeSelector({
   return (
     <div className="qr-type-strip" role="group" aria-label="QR code type">
       {QR_TYPES.map((type) => (
-        <button
+        <motion.button
           key={type.id}
           className={`qr-type-btn ${qrType === type.id ? "active" : ""}`}
           onClick={() => setQrType(type.id)}
           aria-label={`Select ${type.label} QR code type`}
           aria-pressed={qrType === type.id}
+          whileTap={{ scale: 0.93 }}
+          style={{ position: "relative" }}
         >
-          <div className="qr-type-icon">{type.icon}</div>
-          {type.label}
-        </button>
+          {qrType === type.id && (
+            <motion.span
+              layoutId="qr-type-pill"
+              className="qr-type-pill"
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            />
+          )}
+          <span className="qr-type-icon" style={{ position: "relative", zIndex: 1 }}>
+            {type.icon}
+          </span>
+          <span style={{ position: "relative", zIndex: 1 }}>{type.label}</span>
+        </motion.button>
       ))}
     </div>
   );

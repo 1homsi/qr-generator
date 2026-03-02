@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { motion } from "motion/react";
 import { FiX, FiTrash2, FiClock } from "react-icons/fi";
 import type { HistoryEntry, QrData, QrColors, QrStyles, QrType } from "../types";
 
@@ -33,11 +34,20 @@ const HistoryPanel = memo(function HistoryPanel({
   onClose,
 }: HistoryPanelProps) {
   return (
-    <div
+    <motion.div
       className="modal-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="modal history-modal">
+      <motion.div
+        className="modal history-modal"
+        initial={{ scale: 0.94, y: 12, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.94, y: 12, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 400, damping: 32 }}
+      >
         <div className="modal-header">
           <div className="modal-title-row">
             <FiClock />
@@ -107,8 +117,8 @@ const HistoryPanel = memo(function HistoryPanel({
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 });
 

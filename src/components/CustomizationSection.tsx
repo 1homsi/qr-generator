@@ -1,4 +1,5 @@
 import { memo, useState, Dispatch, SetStateAction, ReactNode } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { useDropzone } from "react-dropzone";
 import { FiChevronDown } from "react-icons/fi";
 import {
@@ -145,15 +146,27 @@ const CustomizationSection = memo(function CustomizationSection({
         aria-expanded={open[id]}
       >
         <h4>{title}</h4>
-        <FiChevronDown
-          className={`accordion-chevron ${open[id] ? "open" : ""}`}
-        />
+        <motion.span
+          animate={{ rotate: open[id] ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ display: "flex", color: "var(--text-faint)" }}
+        >
+          <FiChevronDown />
+        </motion.span>
       </button>
-      <div className={`accordion-body ${open[id] ? "open" : ""}`}>
-        <div className="accordion-inner">
-          <div>{children}</div>
-        </div>
-      </div>
+      <AnimatePresence initial={false}>
+        {open[id] && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+            style={{ overflow: "hidden" }}
+          >
+            <div style={{ paddingTop: 16 }}>{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 
