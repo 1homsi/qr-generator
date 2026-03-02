@@ -69,38 +69,40 @@ const InputSection = memo(function InputSection({
     switch (qrType) {
       case "URL":
         return (
-          <div className="form-grid">
-            <div className="url-action-row">
-              <input
-                type="url"
-                placeholder="https://example.com"
-                value={qrData.url ?? ""}
-                onChange={(e) => set("url", e.target.value)}
-                className="url-input"
-              />
+          <div className="url-section">
+            <input
+              type="url"
+              placeholder="https://example.com"
+              value={qrData.url ?? ""}
+              onChange={(e) => set("url", e.target.value)}
+              className="url-input"
+            />
+
+            <div className="url-tools-row">
               <button
-                className={`shorten-btn ${shortening ? "loading" : ""}`}
+                className={`url-tool-btn ${shortening ? "loading" : ""}`}
                 onClick={handleShorten}
                 disabled={shortening || !qrData.url?.trim()}
                 title="Shorten URL with is.gd"
               >
-                <FiLink size={13} />
-                {shortening ? "…" : "Shorten"}
+                <FiLink size={12} />
+                {shortening ? "Shortening…" : "Shorten URL"}
+              </button>
+
+              <button
+                className={`url-tool-btn ${showUtm ? "open" : ""} ${hasUtm ? "has-values" : ""}`}
+                onClick={() => setShowUtm((v) => !v)}
+              >
+                <span>UTM{hasUtm ? " •" : ""}</span>
+                <FiChevronDown
+                  size={12}
+                  style={{
+                    transform: showUtm ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 0.2s",
+                  }}
+                />
               </button>
             </div>
-
-            <button
-              className={`utm-toggle-btn ${showUtm ? "open" : ""} ${hasUtm ? "has-values" : ""}`}
-              onClick={() => setShowUtm((v) => !v)}
-            >
-              <span>UTM Parameters{hasUtm ? " •" : ""}</span>
-              <FiChevronDown
-                style={{
-                  transform: showUtm ? "rotate(180deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s",
-                }}
-              />
-            </button>
 
             {showUtm && (
               <div className="utm-fields">

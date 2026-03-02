@@ -1916,82 +1916,57 @@ body {
   color: var(--primary-color);
 }
 
-/* ── URL action row (URL input + Shorten btn) ─────────── */
+/* ── URL section ──────────────────────────────────────── */
 
-.url-action-row {
+.url-section {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: stretch;
 }
 
-.url-action-row .url-input {
-  flex: 1;
-  min-width: 0;
+.url-tools-row {
+  display: flex;
+  gap: 6px;
 }
 
-.shorten-btn {
+.url-tool-btn {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 0 12px;
+  padding: 5px 10px;
   border: 1.5px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--surface);
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--text-muted);
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-.shorten-btn:hover:not(:disabled) {
+.url-tool-btn:hover:not(:disabled) {
   border-color: var(--primary-color);
   color: var(--primary-color);
 }
 
-.shorten-btn:disabled {
-  opacity: 0.45;
+.url-tool-btn:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-/* ── UTM Builder ──────────────────────────────────────── */
-
-.utm-toggle-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 8px 12px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: left;
-}
-
-.utm-toggle-btn:hover,
-.utm-toggle-btn.open {
+.url-tool-btn.has-values {
   border-color: var(--primary-color);
   color: var(--primary-color);
-}
-
-.utm-toggle-btn.has-values {
-  color: var(--primary-color);
-  border-color: var(--primary-color);
   background: var(--primary-light);
 }
+
+/* ── UTM fields ───────────────────────────────────────── */
 
 .utm-fields {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 4px 0;
 }
 
 /* ── Contrast checker ─────────────────────────────────── */
