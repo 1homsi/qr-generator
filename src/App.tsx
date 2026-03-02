@@ -17,8 +17,15 @@ import ExtraActions from "./components/ExtraActions";
 import { useUndoRedo } from "./hooks/useUndoRedo";
 import { useQrHistory } from "./hooks/useQrHistory";
 import { applyPostProcessing } from "./utils/canvasUtils";
-import type { QrData, QrColors, QrStyles, QrType, GradientType } from "./types";
+import { COLOR_THEMES } from "./constants/themes";
+import type { QrData, QrColors, QrStyles, QrType, GradientType, DotStyle, CornerSquareStyle, CornerDotStyle } from "./types";
 import type { Fmt } from "./components/DownloadSection";
+import type { PreviewSize } from "./components/QRPreview";
+import ShortcutsPanel from "./components/ShortcutsPanel";
+import TemplateGallery from "./components/TemplateGallery";
+import type { QrTemplate } from "./components/TemplateGallery";
+import SurfacePreview from "./components/SurfacePreview";
+import ReliabilityPanel from "./components/ReliabilityPanel";
 
 interface GradientConfig {
   type: GradientType;
@@ -109,6 +116,22 @@ function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showBatch, setShowBatch] = useState(false);
   const [showScan, setShowScan] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showSurface, setShowSurface] = useState(false);
+  const [showReliability, setShowReliability] = useState(false);
+  const [previewSize, setPreviewSize] = useState<PreviewSize>("md");
+  const [invertPreview, setInvertPreview] = useState(false);
+  const [downloadSize, setDownloadSize] = useState(1024);
+  const [currentSnapshot, setCurrentSnapshot] = useState<string | null>(null);
+  const [recentColors, setRecentColors] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("qr-recent-colors");
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const {
     state: styleState,
@@ -149,30 +172,57 @@ function App() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { history, addEntry, removeEntry, clearHistory } = useQrHistory();
 
-  // Keyboard shortcuts: Ctrl/Cmd+Z (undo), Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z (redo)
+  // Keyboard shortcuts: Ctrl/Cmd+Z (undo), Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z (redo), ? (shortcuts)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
-        if (canUndo) {
-          e.preventDefault();
-          undo();
-        }
+        if (canUndo) { e.preventDefault(); undo(); }
       }
       if (
         ((e.ctrlKey || e.metaKey) && e.key === "y") ||
         ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "Z")
       ) {
-        if (canRedo) {
-          e.preventDefault();
-          redo();
-        }
+        if (canRedo) { e.preventDefault(); redo(); }
+      }
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        setShowShortcuts((v) => !v);
+      }
+      if (e.key === "Escape") {
+        setShowShortcuts(false);
+        setShowTemplates(false);
+        setShowSurface(false);
+        setShowReliability(false);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo, canUndo, canRedo]);
+
+  // Restore design from share URL hash on mount
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith("#share=")) return;
+    try {
+      const encoded = hash.slice(7);
+      const config = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+      if (config.qrType) setQrType(config.qrType);
+      if (config.qrData) setQrData(config.qrData);
+      if (config.qrColors || config.qrStyles) {
+        setStyleState((prev) => ({
+          qrColors: config.qrColors ?? prev.qrColors,
+          qrStyles: config.qrStyles
+            ? { ...INITIAL_STYLE_STATE.qrStyles, ...config.qrStyles }
+            : prev.qrStyles,
+        }));
+      }
+      window.history.replaceState(null, "", window.location.pathname);
+      setTimeout(() => showToast("Design loaded from share link!"), 300);
+    } catch {
+      // ignore malformed hash
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     generateQRCode();
@@ -186,8 +236,18 @@ function App() {
 
   const generateQRContent = (): string => {
     switch (qrType) {
-      case "URL":
-        return qrData.url || "https://example.com";
+      case "URL": {
+        let url = qrData.url || "https://example.com";
+        const utmParams = new URLSearchParams();
+        if (qrData.utmSource) utmParams.set("utm_source", qrData.utmSource);
+        if (qrData.utmMedium) utmParams.set("utm_medium", qrData.utmMedium);
+        if (qrData.utmCampaign) utmParams.set("utm_campaign", qrData.utmCampaign);
+        if (qrData.utmContent) utmParams.set("utm_content", qrData.utmContent);
+        if (qrData.utmTerm) utmParams.set("utm_term", qrData.utmTerm);
+        const utmStr = utmParams.toString();
+        if (utmStr) url += (url.includes("?") ? "&" : "?") + utmStr;
+        return url;
+      }
 
       case "TEXT":
         return qrData.text || "";
@@ -379,10 +439,10 @@ END:VCALENDAR`;
     }
     try {
       if (format === "svg" && !qrStyles.backgroundImage && qrStyles.frameTemplate === "none") {
-        const qrCode = new QRCodeStyling(buildQRConfig(1024, content));
+        const qrCode = new QRCodeStyling(buildQRConfig(downloadSize, content));
         await qrCode.download({ name: "qr-code", extension: "svg" });
       } else {
-        const finalCanvas = await getCompositeCanvas(1024);
+        const finalCanvas = await getCompositeCanvas(downloadSize);
         if (!finalCanvas) return;
         const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
         const blob = await new Promise<Blob>((resolve) =>
@@ -451,9 +511,17 @@ END:VCALENDAR`;
         finalCanvas.toBlob((b) => resolve(b!), "image/png")
       );
       const file = new File([blob], "qr-code.png", { type: "image/png" });
-      await navigator.share({ files: [file], title: "QR Code" });
-    } catch {
-      showToast("Share failed");
+      // Try file sharing first; fall back to URL sharing
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "QR Code" });
+      } else {
+        await navigator.share({ url: content, title: "QR Code" });
+      }
+    } catch (err) {
+      // AbortError = user cancelled — not a real failure
+      if ((err as Error)?.name !== "AbortError") {
+        showToast("Share not supported on this browser");
+      }
     }
   };
 
@@ -512,6 +580,91 @@ END:VCALENDAR`;
     setSavedDesigns((prev) => prev.filter((d) => d.id !== id));
   };
 
+  const addRecentColor = useCallback((color: string) => {
+    setRecentColors((prev) => {
+      if (prev[0] === color) return prev;
+      const next = [color, ...prev.filter((c) => c !== color)].slice(0, 8);
+      localStorage.setItem("qr-recent-colors", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  useEffect(() => { addRecentColor(qrColors.foreground); }, [qrColors.foreground, addRecentColor]);
+  useEffect(() => { addRecentColor(qrColors.background); }, [qrColors.background, addRecentColor]);
+
+  const clearAll = () => {
+    setQrData({});
+    setQrType("URL");
+    setStyleState(INITIAL_STYLE_STATE);
+    showToast("Reset to defaults");
+  };
+
+  const randomizeStyle = () => {
+    const theme = COLOR_THEMES[Math.floor(Math.random() * COLOR_THEMES.length)];
+    const DOT_STYLES: DotStyle[] = ["square", "rounded", "dots", "classy", "classy-rounded", "extra-rounded"];
+    const CSQ_STYLES: CornerSquareStyle[] = ["square", "dot", "rounded", "extra-rounded", "classy", "classy-rounded"];
+    const CDT_STYLES: CornerDotStyle[] = ["square", "dot", "rounded"];
+    setStyleState((prev) => ({
+      qrColors: theme.colors,
+      qrStyles: {
+        ...prev.qrStyles,
+        dotStyle: DOT_STYLES[Math.floor(Math.random() * DOT_STYLES.length)],
+        cornerSquareStyle: CSQ_STYLES[Math.floor(Math.random() * CSQ_STYLES.length)],
+        cornerDotStyle: CDT_STYLES[Math.floor(Math.random() * CDT_STYLES.length)],
+      },
+    }));
+    showToast("Style randomized!");
+  };
+
+  const shareViaUrl = () => {
+    const config = {
+      v: 1,
+      qrType,
+      qrData,
+      qrColors,
+      qrStyles: { ...qrStyles, logoFile: null, backgroundImage: null },
+    };
+    try {
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))));
+      const url = `${window.location.origin}${window.location.pathname}#share=${encoded}`;
+      navigator.clipboard
+        .writeText(url)
+        .then(() => showToast("Share link copied! (logo & bg not included)"))
+        .catch(() => showToast("Copy failed"));
+    } catch {
+      showToast("Failed to generate link");
+    }
+  };
+
+  const captureSnapshot = (): string | null => {
+    const canvas = canvasRef.current?.querySelector("canvas");
+    return canvas ? canvas.toDataURL("image/png", 0.85) : null;
+  };
+
+  const openSurface = () => {
+    const snap = captureSnapshot();
+    if (!snap) { showToast("Generate a QR code first"); return; }
+    setCurrentSnapshot(snap);
+    setShowSurface(true);
+  };
+
+  const openReliability = () => {
+    const snap = captureSnapshot();
+    if (!snap) { showToast("Generate a QR code first"); return; }
+    setCurrentSnapshot(snap);
+    setShowReliability(true);
+  };
+
+  const applyTemplate = (template: QrTemplate) => {
+    setQrType(template.qrType);
+    setQrData(template.qrData as QrData);
+    setStyleState((prev) => ({
+      ...prev,
+      qrColors: template.qrColors,
+    }));
+    showToast(`Template "${template.name}" applied!`);
+  };
+
   const contentByteLength = new TextEncoder().encode(generateQRContent()).length;
 
   return (
@@ -532,6 +685,8 @@ END:VCALENDAR`;
           setQrColors={setQrColors}
           qrStyles={qrStyles}
           setQrStyles={setQrStyles}
+          recentColors={recentColors}
+          onColorUsed={addRecentColor}
         />
       </motion.div>
       <motion.div
@@ -545,12 +700,16 @@ END:VCALENDAR`;
             canvasRef={canvasRef}
             phonePreview={phonePreview}
             backgroundImage={qrStyles.backgroundImage}
+            previewSize={previewSize}
+            invertPreview={invertPreview}
           />
           <DownloadSection
             format={format}
             onFormatChange={setFormat}
             onDownload={downloadQRCode}
             onCopy={copyQRCode}
+            downloadSize={downloadSize}
+            onSizeChange={setDownloadSize}
           />
         </div>
       </motion.div>
@@ -568,9 +727,20 @@ END:VCALENDAR`;
           onShowHistory={() => setShowHistory(true)}
           onShowBatch={() => setShowBatch(true)}
           onShowScan={() => setShowScan(true)}
+          onClearAll={clearAll}
+          onRandomize={randomizeStyle}
+          onShareLink={shareViaUrl}
+          onShowShortcuts={() => setShowShortcuts(true)}
+          onShowTemplates={() => setShowTemplates(true)}
+          onShowSurface={openSurface}
+          onShowReliability={openReliability}
           canShare={"share" in navigator}
           phonePreview={phonePreview}
           onTogglePhone={() => setPhonePreview((p) => !p)}
+          invertPreview={invertPreview}
+          onToggleInvert={() => setInvertPreview((v) => !v)}
+          previewSize={previewSize}
+          onSizeChange={setPreviewSize}
         />
         <SavedDesigns
           designs={savedDesigns}
@@ -666,6 +836,31 @@ END:VCALENDAR`;
             }}
             onClose={() => setShowScan(false)}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showShortcuts && <ShortcutsPanel onClose={() => setShowShortcuts(false)} />}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showTemplates && (
+          <TemplateGallery
+            onApply={applyTemplate}
+            onClose={() => setShowTemplates(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSurface && currentSnapshot && (
+          <SurfacePreview snapshot={currentSnapshot} onClose={() => setShowSurface(false)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showReliability && currentSnapshot && (
+          <ReliabilityPanel snapshot={currentSnapshot} onClose={() => setShowReliability(false)} />
         )}
       </AnimatePresence>
     </div>

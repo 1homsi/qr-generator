@@ -1,4 +1,5 @@
-import { memo, Dispatch, SetStateAction } from "react";
+import { memo, useState, Dispatch, SetStateAction } from "react";
+import { FiChevronDown, FiLink } from "react-icons/fi";
 import type { QrData, QrType } from "../types";
 
 interface InputSectionProps {
@@ -32,20 +33,115 @@ const InputSection = memo(function InputSection({
   qrData,
   setQrData,
 }: InputSectionProps) {
+  const [showUtm, setShowUtm] = useState(false);
+  const [shortening, setShortening] = useState(false);
+
   const set = (field: keyof QrData, value: string) =>
     setQrData((prev) => ({ ...prev, [field]: value }));
+
+  const handleShorten = async () => {
+    const url = qrData.url?.trim();
+    if (!url) return;
+    setShortening(true);
+    try {
+      const res = await fetch(
+        `https://is.gd/create.php?format=simple&url=${encodeURIComponent(url)}`
+      );
+      const text = await res.text();
+      if (text.startsWith("https://is.gd/")) {
+        set("url", text.trim());
+      }
+    } catch {
+      // silently ignore CORS / network errors
+    } finally {
+      setShortening(false);
+    }
+  };
+
+  const hasUtm =
+    qrData.utmSource ||
+    qrData.utmMedium ||
+    qrData.utmCampaign ||
+    qrData.utmContent ||
+    qrData.utmTerm;
 
   const renderInputs = () => {
     switch (qrType) {
       case "URL":
         return (
-          <input
-            type="url"
-            placeholder="https://example.com"
-            value={qrData.url ?? ""}
-            onChange={(e) => set("url", e.target.value)}
-            className="url-input"
-          />
+          <div className="form-grid">
+            <div className="url-action-row">
+              <input
+                type="url"
+                placeholder="https://example.com"
+                value={qrData.url ?? ""}
+                onChange={(e) => set("url", e.target.value)}
+                className="url-input"
+              />
+              <button
+                className={`shorten-btn ${shortening ? "loading" : ""}`}
+                onClick={handleShorten}
+                disabled={shortening || !qrData.url?.trim()}
+                title="Shorten URL with is.gd"
+              >
+                <FiLink size={13} />
+                {shortening ? "…" : "Shorten"}
+              </button>
+            </div>
+
+            <button
+              className={`utm-toggle-btn ${showUtm ? "open" : ""} ${hasUtm ? "has-values" : ""}`}
+              onClick={() => setShowUtm((v) => !v)}
+            >
+              <span>UTM Parameters{hasUtm ? " •" : ""}</span>
+              <FiChevronDown
+                style={{
+                  transform: showUtm ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform 0.2s",
+                }}
+              />
+            </button>
+
+            {showUtm && (
+              <div className="utm-fields">
+                <input
+                  type="text"
+                  placeholder="Source (e.g. google, newsletter)"
+                  value={qrData.utmSource ?? ""}
+                  onChange={(e) => set("utmSource", e.target.value)}
+                  className="url-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Medium (e.g. cpc, email, qr)"
+                  value={qrData.utmMedium ?? ""}
+                  onChange={(e) => set("utmMedium", e.target.value)}
+                  className="url-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Campaign (e.g. spring_sale)"
+                  value={qrData.utmCampaign ?? ""}
+                  onChange={(e) => set("utmCampaign", e.target.value)}
+                  className="url-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Content (optional)"
+                  value={qrData.utmContent ?? ""}
+                  onChange={(e) => set("utmContent", e.target.value)}
+                  className="url-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Term (optional)"
+                  value={qrData.utmTerm ?? ""}
+                  onChange={(e) => set("utmTerm", e.target.value)}
+                  className="url-input"
+                />
+              </div>
+            )}
+          </div>
         );
 
       case "TEXT":

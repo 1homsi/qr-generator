@@ -8,7 +8,18 @@ import {
   FiLayers,
   FiCamera,
   FiSmartphone,
+  FiRotateCcw,
+  FiShuffle,
+  FiLink,
+  FiMoon,
+  FiHelpCircle,
+  FiLayout,
+  FiImage,
+  FiActivity,
+  FiMaximize2,
+  FiMinimize2,
 } from "react-icons/fi";
+import type { PreviewSize } from "./QRPreview";
 
 interface ExtraActionsProps {
   onCopyText: () => void;
@@ -18,101 +29,155 @@ interface ExtraActionsProps {
   onShowHistory: () => void;
   onShowBatch: () => void;
   onShowScan: () => void;
+  onClearAll: () => void;
+  onRandomize: () => void;
+  onShareLink: () => void;
+  onShowShortcuts: () => void;
+  onShowTemplates: () => void;
+  onShowSurface: () => void;
+  onShowReliability: () => void;
   canShare: boolean;
   phonePreview: boolean;
   onTogglePhone: () => void;
+  invertPreview: boolean;
+  onToggleInvert: () => void;
+  previewSize: PreviewSize;
+  onSizeChange: (s: PreviewSize) => void;
 }
 
-const ExtraActions = memo(function ExtraActions({
-  onCopyText,
-  onShare,
-  onEmbed,
-  onPrint,
-  onShowHistory,
-  onShowBatch,
-  onShowScan,
-  canShare,
-  phonePreview,
-  onTogglePhone,
-}: ExtraActionsProps) {
+const Btn = ({
+  onClick,
+  title,
+  active,
+  children,
+}: {
+  onClick: () => void;
+  title: string;
+  active?: boolean;
+  children: React.ReactNode;
+}) => (
+  <motion.button
+    className={`extra-btn ${active ? "active" : ""}`}
+    onClick={onClick}
+    title={title}
+    whileTap={{ scale: 0.93 }}
+  >
+    {children}
+  </motion.button>
+);
+
+const ExtraActions = memo(function ExtraActions(props: ExtraActionsProps) {
+  const {
+    onCopyText, onShare, onEmbed, onPrint, onShowHistory, onShowBatch, onShowScan,
+    onClearAll, onRandomize, onShareLink, onShowShortcuts, onShowTemplates,
+    onShowSurface, onShowReliability, canShare, phonePreview, onTogglePhone,
+    invertPreview, onToggleInvert, previewSize, onSizeChange,
+  } = props;
+
   return (
     <div className="extra-actions-panel">
       <h4 className="extra-actions-title">Actions</h4>
+
+      {/* Preview controls */}
+      <p className="extra-actions-group-label">Preview</p>
       <div className="extra-actions">
-        <motion.button
-          className={`extra-btn ${phonePreview ? "active" : ""}`}
-          onClick={onTogglePhone}
-          title="Phone preview"
-          whileTap={{ scale: 0.93 }}
-        >
+        <Btn onClick={onTogglePhone} title="Phone preview" active={phonePreview}>
           <FiSmartphone />
           Phone
-        </motion.button>
-        <motion.button
-          className="extra-btn"
-          onClick={onCopyText}
-          title="Copy encoded text"
-          whileTap={{ scale: 0.93 }}
-        >
+        </Btn>
+        <Btn onClick={onToggleInvert} title="Invert preview (dark background)" active={invertPreview}>
+          <FiMoon />
+          Dark bg
+        </Btn>
+      </div>
+
+      {/* Preview size */}
+      <div className="preview-size-row">
+        <FiMaximize2 size={12} style={{ color: "var(--text-muted)" }} />
+        {(["sm", "md", "lg"] as PreviewSize[]).map((s) => (
+          <button
+            key={s}
+            className={`size-pill-btn ${previewSize === s ? "active" : ""}`}
+            onClick={() => onSizeChange(s)}
+            aria-label={`Preview size ${s}`}
+          >
+            {s.toUpperCase()}
+          </button>
+        ))}
+        <FiMinimize2 size={12} style={{ color: "var(--text-muted)", transform: "rotate(180deg)" }} />
+      </div>
+
+      {/* Export */}
+      <p className="extra-actions-group-label">Export</p>
+      <div className="extra-actions">
+        <Btn onClick={onCopyText} title="Copy encoded text">
           <FiCode />
           Copy text
-        </motion.button>
+        </Btn>
         {canShare && (
-          <motion.button
-            className="extra-btn"
-            onClick={onShare}
-            title="Share"
-            whileTap={{ scale: 0.93 }}
-          >
+          <Btn onClick={onShare} title="Share QR image">
             <FiShare2 />
             Share
-          </motion.button>
+          </Btn>
         )}
-        <motion.button
-          className="extra-btn"
-          onClick={onEmbed}
-          title="Get embed code"
-          whileTap={{ scale: 0.93 }}
-        >
+        <Btn onClick={onEmbed} title="Get embed HTML snippet">
           <FiCode size={13} />
           Embed
-        </motion.button>
-        <motion.button
-          className="extra-btn"
-          onClick={onPrint}
-          title="Print / Save as PDF"
-          whileTap={{ scale: 0.93 }}
-        >
+        </Btn>
+        <Btn onClick={onPrint} title="Print / Save as PDF">
           <FiPrinter />
           Print
-        </motion.button>
-        <motion.button
-          className="extra-btn"
-          onClick={onShowHistory}
-          title="History"
-          whileTap={{ scale: 0.93 }}
-        >
-          <FiClock />
-          History
-        </motion.button>
-        <motion.button
-          className="extra-btn"
-          onClick={onShowBatch}
-          title="Batch generate"
-          whileTap={{ scale: 0.93 }}
-        >
-          <FiLayers />
-          Batch
-        </motion.button>
-        <motion.button
-          className="extra-btn"
-          onClick={onShowScan}
-          title="Decode QR code"
-          whileTap={{ scale: 0.93 }}
-        >
+        </Btn>
+        <Btn onClick={onShareLink} title="Copy shareable URL with current design">
+          <FiLink />
+          Share link
+        </Btn>
+      </div>
+
+      {/* Tools */}
+      <p className="extra-actions-group-label">Tools</p>
+      <div className="extra-actions">
+        <Btn onClick={onShowScan} title="Decode QR code from image">
           <FiCamera />
           Scan
-        </motion.button>
+        </Btn>
+        <Btn onClick={onShowBatch} title="Batch generate from CSV">
+          <FiLayers />
+          Batch
+        </Btn>
+        <Btn onClick={onShowHistory} title="View download history">
+          <FiClock />
+          History
+        </Btn>
+        <Btn onClick={onShowSurface} title="Preview on different surfaces">
+          <FiImage />
+          Surfaces
+        </Btn>
+        <Btn onClick={onShowReliability} title="Test scan reliability">
+          <FiActivity />
+          Reliability
+        </Btn>
+        <Btn onClick={onShowTemplates} title="Start from a template">
+          <FiLayout />
+          Templates
+        </Btn>
+      </div>
+
+      {/* Design */}
+      <p className="extra-actions-group-label">Design</p>
+      <div className="extra-actions">
+        <Btn onClick={onRandomize} title="Randomize style">
+          <FiShuffle />
+          Randomize
+        </Btn>
+        <Btn onClick={onClearAll} title="Reset everything to defaults">
+          <FiRotateCcw />
+          Reset all
+        </Btn>
+        <Btn onClick={onShowShortcuts} title="Keyboard shortcuts">
+          <FiHelpCircle />
+          Shortcuts
+        </Btn>
       </div>
     </div>
   );

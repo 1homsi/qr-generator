@@ -19,11 +19,36 @@ import type {
 } from "../types";
 import { COLOR_THEMES } from "../constants/themes";
 
+// ── Contrast ratio helpers ─────────────────────────────
+function hexToLinear(hex: string): number {
+  const c = parseInt(hex.slice(1), 16);
+  const r = (c >> 16) & 255;
+  const g = (c >> 8) & 255;
+  const b = c & 255;
+  return [r, g, b].reduce((sum, ch) => {
+    const s = ch / 255;
+    return sum + (s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4));
+  }, 0) / 3; // simplified luminance
+}
+function contrastRatio(fg: string, bg: string): number {
+  try {
+    const l1 = hexToLinear(fg);
+    const l2 = hexToLinear(bg);
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  } catch {
+    return 0;
+  }
+}
+
 interface CustomizationSectionProps {
   qrColors: QrColors;
   setQrColors: Dispatch<SetStateAction<QrColors>>;
   qrStyles: QrStyles;
   setQrStyles: Dispatch<SetStateAction<QrStyles>>;
+  recentColors: string[];
+  onColorUsed: (color: string) => void;
 }
 
 const FRAME_STYLES: { id: CornerSquareStyle; name: string; icon: ReactNode }[] =
@@ -62,6 +87,8 @@ const CustomizationSection = memo(function CustomizationSection({
   setQrColors,
   qrStyles,
   setQrStyles,
+  recentColors,
+  onColorUsed,
 }: CustomizationSectionProps) {
   const [open, setOpen] = useState<Record<string, boolean>>({
     themes: false,
@@ -286,6 +313,28 @@ const CustomizationSection = memo(function CustomizationSection({
       {/* Colors & Gradients */}
       <AccordionSection id="colors" title="Colors &amp; Gradients">
         <div className="color-section">
+          {/* Recent Colors */}
+          {recentColors.length > 0 && (
+            <div className="recent-colors-row">
+              <span className="recent-colors-label">Recent</span>
+              <div className="recent-colors">
+                {recentColors.map((c) => (
+                  <button
+                    key={c}
+                    className="recent-color-swatch"
+                    style={{ background: c }}
+                    title={c}
+                    onClick={() => {
+                      setQrColors((prev) => ({ ...prev, foreground: c }));
+                      onColorUsed(c);
+                    }}
+                    aria-label={`Use color ${c}`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="gradient-toggle">
             <label className="toggle-label">
               <input
@@ -382,12 +431,10 @@ const CustomizationSection = memo(function CustomizationSection({
                 <input
                   type="color"
                   value={qrColors.foreground}
-                  onChange={(e) =>
-                    setQrColors((prev) => ({
-                      ...prev,
-                      foreground: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => {
+                    setQrColors((prev) => ({ ...prev, foreground: e.target.value }));
+                    onColorUsed(e.target.value);
+                  }}
                   className="color-picker"
                   aria-label="Foreground color"
                 />
@@ -402,18 +449,32 @@ const CustomizationSection = memo(function CustomizationSection({
               <input
                 type="color"
                 value={qrColors.background}
-                onChange={(e) =>
-                  setQrColors((prev) => ({
-                    ...prev,
-                    background: e.target.value,
-                  }))
-                }
+                onChange={(e) => {
+                  setQrColors((prev) => ({ ...prev, background: e.target.value }));
+                  onColorUsed(e.target.value);
+                }}
                 className="color-picker"
                 aria-label="Background color"
               />
               <span className="color-hex">{qrColors.background}</span>
             </div>
           </div>
+
+          {/* Contrast checker */}
+          {(() => {
+            const fg = qrStyles.useGradient ? qrStyles.gradientColors[0] : qrColors.foreground;
+            const ratio = contrastRatio(fg, qrColors.background);
+            const rating = ratio >= 4.5 ? "good" : ratio >= 3 ? "warn" : "poor";
+            const label = ratio >= 4.5 ? "Excellent" : ratio >= 3 ? "Caution" : "Poor";
+            return (
+              <div className="contrast-row">
+                <span className="contrast-label">Scan contrast</span>
+                <span className={`contrast-badge contrast-${rating}`}>
+                  {ratio.toFixed(1)}:1 — {label}
+                </span>
+              </div>
+            );
+          })()}
         </div>
       </AccordionSection>
 

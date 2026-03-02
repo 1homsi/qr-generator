@@ -19,6 +19,11 @@ export type QrType =
 
 export interface QrData {
   url?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
   text?: string;
   firstName?: string;
   lastName?: string;

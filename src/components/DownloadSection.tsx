@@ -9,6 +9,8 @@ interface DownloadSectionProps {
   onFormatChange: (f: Fmt) => void;
   onDownload: () => void;
   onCopy: () => void;
+  downloadSize: number;
+  onSizeChange: (size: number) => void;
 }
 
 const FORMATS: { value: Fmt; label: string }[] = [
@@ -17,11 +19,20 @@ const FORMATS: { value: Fmt; label: string }[] = [
   { value: "jpeg", label: "JPEG" },
 ];
 
+const SIZES: { value: number; label: string; sub: string }[] = [
+  { value: 512, label: "Small", sub: "512px" },
+  { value: 1024, label: "Standard", sub: "1024px" },
+  { value: 2048, label: "High-DPI", sub: "2048px" },
+  { value: 3000, label: "Print", sub: "3000px" },
+];
+
 const DownloadSection = memo(function DownloadSection({
   format,
   onFormatChange,
   onDownload,
   onCopy,
+  downloadSize,
+  onSizeChange,
 }: DownloadSectionProps) {
   return (
     <div className="download-section">
@@ -43,6 +54,31 @@ const DownloadSection = memo(function DownloadSection({
               />
             )}
             <span style={{ position: "relative", zIndex: 1 }}>{f.label}</span>
+          </motion.button>
+        ))}
+      </div>
+
+      <div className="size-selector" role="group" aria-label="Download size">
+        {SIZES.map((s) => (
+          <motion.button
+            key={s.value}
+            className={`size-btn ${downloadSize === s.value ? "active" : ""}`}
+            onClick={() => onSizeChange(s.value)}
+            aria-pressed={downloadSize === s.value}
+            whileTap={{ scale: 0.95 }}
+            style={{ position: "relative" }}
+          >
+            {downloadSize === s.value && (
+              <motion.span
+                layoutId="size-pill"
+                className="size-pill"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <span style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+              <span>{s.label}</span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>{s.sub}</span>
+            </span>
           </motion.button>
         ))}
       </div>

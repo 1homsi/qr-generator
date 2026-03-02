@@ -1,17 +1,26 @@
 import { memo, RefObject } from "react";
 import { motion } from "motion/react";
 
+export type PreviewSize = "sm" | "md" | "lg";
+const SIZE_PX: Record<PreviewSize, number> = { sm: 240, md: 360, lg: 480 };
+
 interface QRPreviewProps {
   canvasRef: RefObject<HTMLDivElement | null>;
   phonePreview: boolean;
   backgroundImage: string | null;
+  previewSize: PreviewSize;
+  invertPreview: boolean;
 }
 
 const QRPreview = memo(function QRPreview({
   canvasRef,
   phonePreview,
   backgroundImage,
+  previewSize,
+  invertPreview,
 }: QRPreviewProps) {
+  const px = SIZE_PX[previewSize];
+
   return (
     <div className="preview-wrapper">
       <motion.div
@@ -30,16 +39,18 @@ const QRPreview = memo(function QRPreview({
         >
           <div
             className="qr-preview"
-            style={
-              backgroundImage
+            style={{
+              ...(phonePreview ? {} : { width: px, height: px }),
+              ...(backgroundImage
                 ? {
                     backgroundImage: `url(${backgroundImage})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     borderRadius: 8,
                   }
-                : undefined
-            }
+                : {}),
+              ...(invertPreview ? { filter: "invert(1)" } : {}),
+            }}
           >
             <div ref={canvasRef} />
           </div>
