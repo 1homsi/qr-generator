@@ -1,7 +1,15 @@
 import { memo } from "react";
 import { FiSun, FiMoon } from "react-icons/fi";
 
-const ThemeToggle = memo(function ThemeToggle({ isDark, onToggle }) {
+interface ThemeToggleProps {
+  isDark: boolean;
+  onToggle: () => void;
+}
+
+const ThemeToggle = memo(function ThemeToggle({
+  isDark,
+  onToggle,
+}: ThemeToggleProps) {
   return (
     <button
       className={`theme-toggle${isDark ? " dark" : ""}`}
